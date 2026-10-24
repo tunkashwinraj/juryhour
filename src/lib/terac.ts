@@ -202,7 +202,8 @@ export function buildOpportunityBody(i: {
   numParticipants: number;
   businessType: "b2c" | "b2b";
   description: string;
-  feasibilityRequestId: string;
+  /** Omit to let Terac estimate the price while creating the draft (instant; no human review). */
+  feasibilityRequestId?: string;
   durationMinutes: number;
   testId: string;
   screeningQuestions: JurorProfile["screening_questions"];
@@ -215,7 +216,7 @@ export function buildOpportunityBody(i: {
     project_id: i.projectId,
     num_participants: i.numParticipants,
     business_type: i.businessType,
-    feasibility_request_id: i.feasibilityRequestId,
+    ...(i.feasibilityRequestId ? { feasibility_request_id: i.feasibilityRequestId } : {}),
     customer_screening_review: "auto_invite",
     expected_days_to_complete: 5, // OpenAPI minimum (SPEC said 1)
     device_types: ["desktop", "mobile_ios", "mobile_android"],
@@ -244,7 +245,8 @@ export async function createOpportunity(i: {
   numParticipants: number;
   businessType: "b2c" | "b2b";
   description: string;
-  feasibilityRequestId: string;
+  /** Omit to let Terac estimate the price while creating the draft (instant; no human review). */
+  feasibilityRequestId?: string;
   durationMinutes: number;
   testId: string;
   screeningQuestions: JurorProfile["screening_questions"];

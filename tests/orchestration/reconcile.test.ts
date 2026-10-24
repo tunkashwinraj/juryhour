@@ -169,8 +169,43 @@ describe("QUOTING", () => {
     expect(runs("procurement")).toHaveLength(0);
   });
 
+  it("quote still with a person after 10 min → Terac prices a draft instantly → launch with the same checks", async () => {
+    m.getQuote.mockImplementation(async (id: string) => ({ id, status: "RECEIVED", costPerParticipant: null }));
+    const { o, p } = quoting();
+    at(5);
+    await runReconcile();
+    expect(m.createOpportunity).not.toHaveBeenCalled();
+    expect(stage(o)).toBe("QUOTING");
+    at(11);
+    await runReconcile();
+    // first create has no feasibility id (Terac estimates); the launch reuses that draft
+    expect(m.createOpportunity).toHaveBeenCalledTimes(1);
+    expect(m.createOpportunity.mock.calls[0][0].feasibilityRequestId).toBeUndefined();
+    expect(row("panels", p.id).terac_opportunity_id).toMatch(/^opp_/);
+    expect(m.launchOpportunity).toHaveBeenCalledWith(row("panels", p.id).terac_opportunity_id);
+    expect(stage(o)).toBe("PANEL_LIVE");
+    expect(fake.rows("events").some((e) => e.action === "quote_estimated" && e.order_id === o.id)).toBe(true);
+  });
+
+  it("instant estimate above the cost cap → not launched; procurement takes over at 90 min", async () => {
+    m.getQuote.mockImplementation(async (id: string) => ({ id, status: "RECEIVED", costPerParticipant: null }));
+    m.createOpportunity.mockImplementation(async (i: { numParticipants: number }) => ({
+      id: `opp_dear_${i.numParticipants}`, totalCostCents: i.numParticipants * 5000, costPerParticipantCents: 5000, affordable: true,
+    }));
+    const { o } = quoting();
+    at(11);
+    await runReconcile();
+    expect(stage(o)).toBe("QUOTING");
+    expect(m.launchOpportunity).not.toHaveBeenCalled();
+    at(91);
+    await runReconcile();
+    expect(runs("procurement")).toHaveLength(1);
+  });
+
   it("> 90 min → procurement; > 110 min → full refund (infeasible) → REFUNDED", async () => {
     m.getQuote.mockImplementation(async (id: string) => ({ id, status: "RECEIVED", costPerParticipant: null }));
+    // Terac can't price the draft either, so nothing launches
+    m.createOpportunity.mockRejectedValue(Object.assign(new Error("Terac opportunity was created without pricing"), { name: "TeracError", code: "UNPRICED" }));
     const { o } = quoting();
     at(91);
     await runReconcile();
