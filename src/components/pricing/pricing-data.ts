@@ -1,37 +1,36 @@
 // Pure pricing content for PricingSection and /pricing (docs/WEBSITE_SPEC.md §5.7). No I/O, no React.
-import { ADDONS, ADDON_EXTRA_JURORS, TIERS, UPGRADE_CREDIT_HOURS, type TierName } from "@/lib/constants";
-import type { LaunchOffer } from "@/lib/launch";
+// Pricing v3 (founder decision 2026-10): exactly two public plans — Quick Read $11 and Verdict ($299
+// launch offer · regular $499 from Dec 1) [recommended] — plus extra jurors at $7 each and the HALF
+// coupon (first Verdict). Retest is sold only from a delivered Verdict report, never on pricing pages.
+import {
+  EXTRA_JUROR_USD,
+  MAX_EXTRA_JURORS,
+  PUBLIC_TIER_LABELS,
+  TIERS,
+  UPGRADE_CREDIT_HOURS,
+  VERDICT_REGULAR_FROM,
+  VERDICT_REGULAR_USD,
+  type TierName,
+} from "@/lib/constants";
+import { couponEndsLabel, couponPrice, type PublicCoupon } from "@/lib/coupons";
 
-/** Specialist is quoted per audience; this is the floor of SPECIALIST_PRICE. */
-export const SPECIALIST_FROM_USD = 499;
+export { couponEndsLabel };
 
-export const TIER_ORDER: TierName[] = ["spark", "pulse", "proof", "launch_pack", "specialist"];
+/** Plans shown as cards and table columns. Retest is not a card: it is bought from a Verdict report. */
+export type CardTier = "spark" | "proof";
+export const TIER_ORDER: CardTier[] = ["spark", "proof"];
 
-export const TIER_LABEL: Record<TierName, string> = {
-  spark: "Spark",
-  pulse: "Pulse",
-  proof: "Proof",
-  launch_pack: "Launch Pack",
-  specialist: "Specialist Jury",
-};
+/** Customer-facing names (re-exported from constants so every page agrees). */
+export const TIER_LABEL: Record<TierName, string> = PUBLIC_TIER_LABELS;
 
 // "N real people" is rendered by PriceCard from `jurors`, so it isn't repeated in the bullets.
-const COPY: Record<TierName, { summary: string; bullets: string[] }> = {
+const COPY: Record<CardTier, { summary: string; bullets: string[] }> = {
   spark: {
     summary: "A first impression of your headline.",
     bullets: [
-      `${TIERS.spark.minutes}-minute first impression of your headline`,
+      `${TIERS.spark.minutes}-minute reaction to your headline`,
       "AI critique",
       "1 rewritten headline (untested)",
-      "Same day",
-    ],
-  },
-  pulse: {
-    summary: "Real reactions to your current page.",
-    bullets: [
-      `${TIERS.pulse.minutes}-minute reaction to your current page`,
-      "Full report with anonymous quotes",
-      "Rewritten hero section (untested)",
       "Same day",
     ],
   },
@@ -39,95 +38,61 @@ const COPY: Record<TierName, { summary: string; bullets: string[] }> = {
     summary: "Your page against our rewrite, judged blind.",
     bullets: [
       "Your page vs our rewrite, random order",
-      "Verdict, scorecard, top fixes, winning copy",
+      "Winner, scorecard, top fixes, winning copy",
       "Same day",
-    ],
-  },
-  launch_pack: {
-    summary: "Proof now, and proof that your update worked.",
-    bullets: ["Proof now + a free retest after you update your page", "See your own before and after"],
-  },
-  specialist: {
-    summary: "Verified professionals who match your buyer.",
-    bullets: [
-      `${TIERS.specialist.jurors} verified professionals matching your buyer (job, industry, seniority)`,
-      "Buyer objections and price reaction",
-      "24–72 h",
     ],
   },
 };
 
 export type TierView = {
-  tier: TierName;
+  tier: CardTier;
   name: string;
-  /** Price shown on the card (launch price when the offer applies to this tier). */
-  price: number | null;
-  /** Normal price, only while a launch offer applies to this tier. */
-  compareAt: number | null;
-  /** Price shown once the offer has ended (client-side swap). Equals `price` without an offer. */
-  normalPrice: number | null;
-  fromPrice: boolean;
-  /** Shown by PriceCard as "N real people"; null for Specialist (its bullet names the professionals). */
-  jurors: number | null;
+  price: number;
+  /** Shown by PriceCard as "N real people". */
+  jurors: number;
   summary: string;
   bullets: string[];
   recommended: boolean;
-  offer: { endsAt: string; priceUsd: number; normalUsd: number } | null;
 };
 
-export function buildTierViews(prices: Partial<Record<TierName, number | null>>, offer: LaunchOffer | null): TierView[] {
-  return TIER_ORDER.map((tier) => {
-    const base =
-      tier === "specialist" ? SPECIALIST_FROM_USD : (prices[tier] ?? (TIERS[tier].price as number | null));
-    const o = offer && offer.tier === tier && base !== null && offer.priceUsd < base ? offer : null;
-    return {
-      tier,
-      name: TIER_LABEL[tier],
-      price: o ? o.priceUsd : base,
-      compareAt: o ? base : null,
-      normalPrice: base,
-      fromPrice: tier === "specialist",
-      jurors: tier === "specialist" ? null : TIERS[tier].jurors,
-      summary: COPY[tier].summary,
-      bullets: COPY[tier].bullets,
-      recommended: tier === "proof",
-      offer: o ? { endsAt: o.endsAt, priceUsd: o.priceUsd, normalUsd: base as number } : null,
-    };
-  });
+export type PriceMap = Partial<Record<TierName, number | null>>;
+
+/** Price of a fixed-price tier: the prices table value when present, else the constant. */
+export function tierPrice(tier: "spark" | "proof" | "retest", prices: PriceMap): number {
+  return prices[tier] ?? TIERS[tier].price;
 }
 
-/** Add-ons actually sold. "Second page" is deliberately absent (WEBSITE_CONTRACTS §0.3). */
-export const SOLD_ADDONS = [
-  { key: "extra5", label: `+${ADDON_EXTRA_JURORS} jurors`, detail: "More people on your panel.", price: ADDONS.extra5 },
-  { key: "rush", label: "Rush", detail: "Your panel goes first.", price: ADDONS.rush },
-] as const;
-
-export const UPGRADE_CREDIT_LINE = `Your Spark counts toward Proof if you upgrade within ${UPGRADE_CREDIT_HOURS} hours.`;
-
-export const usd = (n: number) => `$${Number.isInteger(n) ? n : n.toFixed(2)}`;
-
-const ET_TIME = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York",
-  hour: "numeric",
-  minute: "2-digit",
-});
-const ET_DAY = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-const ET_DATE = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric" });
-
-/** "6:00pm ET" for an ISO time. */
-export function formatEtTime(iso: string): string {
-  return `${ET_TIME.format(new Date(iso)).replace(/\s?([AP])M$/i, (_m, p: string) => `${p.toLowerCase()}m`)} ET`;
+export function buildTierViews(prices: PriceMap): TierView[] {
+  return TIER_ORDER.map((tier) => ({
+    tier,
+    name: TIER_LABEL[tier],
+    price: tierPrice(tier, prices),
+    jurors: TIERS[tier].jurors,
+    summary: COPY[tier].summary,
+    bullets: COPY[tier].bullets,
+    recommended: tier === "proof",
+  }));
 }
 
-/** "until 6:00pm ET today" (or "until 6:00pm ET on Oct 25" when the end is on another ET day). */
-export function offerEndsLabel(endsAt: string, now: Date = new Date()): string {
-  const sameDay = ET_DAY.format(new Date(endsAt)) === ET_DAY.format(now);
-  return `until ${formatEtTime(endsAt)} ${sameDay ? "today" : `on ${ET_DATE.format(new Date(endsAt))}`}`;
+export function usd(n: number): string {
+  return `$${Number.isInteger(n) ? n : n.toFixed(2)}`;
+}
+
+/** "launch offer · regular $499 from Dec 1" (copy only; no strike-through anywhere). */
+export const VERDICT_LAUNCH_NOTE = `launch offer · regular ${usd(VERDICT_REGULAR_USD)} from ${VERDICT_REGULAR_FROM}`;
+
+export const UPGRADE_CREDIT_LINE = `Your ${usd(TIERS.spark.price)} counts toward a Verdict for ${UPGRADE_CREDIT_HOURS} hours.`;
+
+export const EXTRA_JURORS_LINE = `Add up to ${MAX_EXTRA_JURORS} extra jurors to a Quick Read or Verdict at ${usd(EXTRA_JUROR_USD)} each.`;
+
+/** Verdict price with the coupon (whole dollars, rounded down: $299 → $149). */
+export function verdictCouponPrice(prices: PriceMap, coupon: PublicCoupon): number {
+  return couponPrice(tierPrice("proof", prices), coupon.percentOff);
+}
+
+/** "First Verdict? Code HALF makes it $149 through Nov 30." */
+export function couponAdLine(prices: PriceMap, coupon: PublicCoupon): string {
+  return `First Verdict? Code ${coupon.code} makes it ${usd(verdictCouponPrice(prices, coupon))} through ${couponEndsLabel(coupon.endsAt)}.`;
 }
 
 /** "2h 14m" for a duration in minutes. */
@@ -140,45 +105,22 @@ export function formatDuration(minutes: number): string {
   return r === 0 ? `${h}h` : `${h}h ${r}m`;
 }
 
-/** Full feature comparison for /pricing. Columns follow TIER_ORDER. Only what each tier really includes. */
+/** Feature comparison for /pricing. Columns follow TIER_ORDER. Only what each plan really includes. */
 export function featureRows(views: TierView[]): { label: string; cells: string[] }[] {
-  const by = Object.fromEntries(views.map((v) => [v.tier, v])) as Record<TierName, TierView>;
-  const col = (f: (t: TierName) => string) => TIER_ORDER.map(f);
-  const priceCell = (t: TierName) => {
-    const v = by[t];
-    if (v.normalPrice === null) return "Quote";
-    return `${v.fromPrice ? "From " : ""}${usd(v.normalPrice)}`;
-  };
+  const by = Object.fromEntries(views.map((v) => [v.tier, v])) as Record<CardTier, TierView>;
+  const col = (f: (t: CardTier) => string) => TIER_ORDER.map(f);
   return [
-    { label: "Price", cells: col(priceCell) },
+    { label: "Price", cells: [usd(by.spark.price), `${usd(by.proof.price)} ${VERDICT_LAUNCH_NOTE}`] },
     { label: "Real people", cells: col((t) => String(TIERS[t].jurors)) },
     { label: "Minutes per juror", cells: col((t) => String(TIERS[t].minutes)) },
-    {
-      label: "Who judges",
-      cells: col((t) =>
-        t === "specialist" ? "Verified professionals (job, industry, seniority)" : "People who match your buyer",
-      ),
-    },
-    {
-      label: "What they judge",
-      cells: [
-        "Your headline",
-        "Your current page",
-        "Your page vs our rewrite",
-        "Your page vs our rewrite, then your update",
-        "Your page and your price",
-      ],
-    },
-    { label: "AI critique", cells: ["Yes", "—", "—", "—", "—"] },
-    {
-      label: "Rewritten copy",
-      cells: ["1 headline (untested)", "Hero section (untested)", "Winning copy, tested", "Winning copy, tested", "—"],
-    },
-    { label: "Blind A/B test, random order", cells: ["—", "—", "Yes", "Yes", "—"] },
-    { label: "Verdict, scorecard and top fixes", cells: ["—", "—", "Yes", "Yes", "—"] },
-    { label: "Anonymous juror quotes", cells: ["3 raw answers", "Yes", "Yes", "Yes", "Yes"] },
-    { label: "Buyer objections and price reaction", cells: ["—", "—", "—", "—", "Yes"] },
-    { label: "Free retest after you update", cells: ["—", "—", "—", "Yes", "—"] },
-    { label: "Delivery", cells: ["Same day", "Same day", "Same day", "Same day", "24–72 h"] },
+    { label: "Who judges", cells: col(() => "People who match your buyer") },
+    { label: "What they judge", cells: ["Your headline", "Your page vs our rewrite"] },
+    { label: "AI critique", cells: ["Yes", "—"] },
+    { label: "Rewritten copy", cells: ["1 headline (untested)", "Winning copy, tested"] },
+    { label: "Blind A/B test, random order", cells: ["—", "Yes"] },
+    { label: "Winner, scorecard and top fixes", cells: ["—", "Yes"] },
+    { label: "Anonymous juror quotes", cells: ["3 raw answers", "Yes"] },
+    { label: `Extra jurors (up to ${MAX_EXTRA_JURORS})`, cells: [`${usd(EXTRA_JUROR_USD)} each`, `${usd(EXTRA_JUROR_USD)} each`] },
+    { label: "Delivery", cells: ["Same day", "Same day"] },
   ];
 }

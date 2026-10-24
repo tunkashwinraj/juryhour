@@ -1,4 +1,4 @@
-// POST /api/leads — waitlist (sales paused) and agency "free Proof" requests (WEBSITE_CONTRACTS §2 C).
+// POST /api/leads — waitlist (sales paused) and agency "free Verdict" requests (WEBSITE_CONTRACTS §2 C).
 // in  { kind: "waitlist" | "agency_offer", email, payload?, src?, hp? }   (hp = honeypot, must be empty)
 // out { ok:true } | { ok:false, code: "bad_request" | "rate_limited" | "internal", error }
 // Rate limit: 5 rows per ip_hash per 24h. A repeat of the same kind+email within 24h is a no-op.

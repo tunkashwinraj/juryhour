@@ -103,10 +103,18 @@ describe("FAQ content", () => {
     expect(() => faqByIds(["nope"])).toThrow();
   });
 
-  it("never promises a code discount", () => {
+  it("partner codes never discount; only the Verdict launch code does", () => {
     const text = ALL_FAQ.map((i) => i.aText).join(" ").toLowerCase();
     expect(text).not.toMatch(/\b\d+% off\b/);
-    expect(faqByIds(["codes"])[0].aText).toMatch(/doesn't change the price/);
+    const codes = faqByIds(["codes"])[0].aText;
+    expect(codes).toMatch(/don't change the price/);
+    expect(codes).toMatch(/Verdict launch code/);
+  });
+
+  it("never shows retired tier names or sells Retest", () => {
+    const text = ALL_FAQ.map((i) => `${i.q} ${i.aText}`).join(" ");
+    expect(text).not.toMatch(/Spark|Pulse|Proof|Launch Pack|Rush/);
+    expect(text).not.toMatch(/retest/i);
   });
 });
 

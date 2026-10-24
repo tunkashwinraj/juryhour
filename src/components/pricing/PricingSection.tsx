@@ -1,26 +1,19 @@
 // Pricing (docs/WEBSITE_SPEC.md §5.7; WEBSITE_CONTRACTS §2 B). Server component, no loading state:
-// prices come from the cached shell read (constants fallback) and the launch offer is evaluated
-// in the same cache. While an offer applies to a tier, its card shows the launch price with the
-// normal price struck; a client guard swaps in the normal card once the offer's end time passes.
+// prices come from the cached shell read (constants fallback). Exactly two cards (Quick Read, Verdict
+// [VERDICT_BADGE]); the Verdict card follows the visitor's HALF code client-side (CouponPriceCard).
+// Under the cards: extra jurors and the upgrade credit.
 import { Suspense } from "react";
 import { HideWhenRefused, SalesStatus } from "@/components/preview/PreviewProvider";
-import { Badge, Banner, PriceCard, Section } from "@/components/ui";
+import { Badge, Banner, Section } from "@/components/ui";
 import { TierCta } from "@/components/preview/TierCta";
-import { ExpiryGuard } from "@/components/marketing/ExpiryGuard";
 import { getPricingSnapshot, getSalesPaused } from "@/lib/marketing-data";
-import type { TierName } from "@/lib/constants";
-import {
-  SOLD_ADDONS,
-  UPGRADE_CREDIT_LINE,
-  buildTierViews,
-  offerEndsLabel,
-  usd,
-  type TierView,
-} from "./pricing-data";
+import { VERDICT_BADGE, type TierName } from "@/lib/constants";
+import { CouponPriceCard } from "./CouponPriceCard";
+import { EXTRA_JURORS_LINE, UPGRADE_CREDIT_LINE, buildTierViews, type TierView } from "./pricing-data";
 import p from "./pricing.module.css";
 
 export type PricingSectionProps = {
-  /** Tier to emphasize (segment pages); defaults to Proof. "Recommended" always stays on Proof. */
+  /** Tier to emphasize (segment pages); defaults to Verdict. "Recommended" always stays on Verdict. */
   highlight?: TierName;
   /** Cards + add-ons only, no section heading/lede (heading kept for screen readers). */
   compact?: boolean;
@@ -38,8 +31,8 @@ export async function PricingSection({
   title = "Pay per test. No subscription.",
   id = "pricing",
 }: PricingSectionProps) {
-  const { prices, offer, asOf } = await getPricingSnapshot();
-  const tiers = buildTierViews(prices, offer);
+  const { prices } = await getPricingSnapshot();
+  const tiers = buildTierViews(prices);
   const cardLevel = headingLevel === 3 ? 4 : 3;
   // Hidden while the visitor's last preview was refused (WEBSITE_SPEC §7.4: no pricing for blocked products).
   return (
@@ -73,26 +66,13 @@ export async function PricingSection({
       <ul className={p.cards}>
         {tiers.map((t) => (
           <li key={t.tier}>
-            {t.offer ? (
-              <ExpiryGuard endsAt={t.offer.endsAt} after={<TierCard t={t} highlight={highlight} level={cardLevel} atNormalPrice />}>
-                <TierCard t={t} highlight={highlight} level={cardLevel} offerLabel={offerEndsLabel(t.offer.endsAt, new Date(asOf))} />
-              </ExpiryGuard>
-            ) : (
-              <TierCard t={t} highlight={highlight} level={cardLevel} />
-            )}
+            <TierCard t={t} highlight={highlight} level={cardLevel} />
           </li>
         ))}
       </ul>
 
       <div className={p.extras}>
-        <ul className={p.addons} aria-label="Add-ons">
-          <li className={p.addonsLabel}>Add-ons:</li>
-          {SOLD_ADDONS.map((a) => (
-            <li key={a.key}>
-              {a.label} <span className={p.price}>{usd(a.price)}</span>
-            </li>
-          ))}
-        </ul>
+        <p className={p.note}>{EXTRA_JURORS_LINE}</p>
         <p className={p.credit}>{UPGRADE_CREDIT_LINE}</p>
       </div>
     </Section>
@@ -100,44 +80,25 @@ export async function PricingSection({
   );
 }
 
-function TierCard({
-  t,
-  highlight,
-  level,
-  atNormalPrice = false,
-  offerLabel,
-}: {
-  t: TierView;
-  highlight: TierName;
-  level: 3 | 4;
-  atNormalPrice?: boolean;
-  offerLabel?: string;
-}) {
-  const showOffer = Boolean(t.offer) && !atNormalPrice;
+function TierCard({ t, highlight, level }: { t: TierView; highlight: TierName; level: 3 | 4 }) {
   const emphasized = t.tier === highlight;
   return (
-    <PriceCard
+    <CouponPriceCard
+      tier={t.tier}
       headingLevel={level}
       name={t.name}
-      price={showOffer ? t.price : t.normalPrice}
-      priceNote={t.fromPrice ? "from" : undefined}
-      compareAt={showOffer ? t.compareAt : null}
+      price={t.price}
       jurors={t.jurors}
       summary={t.summary}
       bullets={t.bullets}
-      badge={t.recommended ? <Badge tone="verdict">Recommended</Badge> : undefined}
+      badge={t.recommended ? <Badge tone="verdict">{VERDICT_BADGE}</Badge> : undefined}
       emphasized={emphasized}
       cta={
         <TierCta
           tier={t.tier}
-          label={t.tier === "specialist" ? "Get a quote" : `Choose ${t.name}`}
+          label={`Choose ${t.name}`}
           variant={emphasized ? "primary" : "secondary"}
         />
-      }
-      footnote={
-        showOffer && t.offer ? (
-          <>Launch price{offerLabel ? ` ${offerLabel}` : ""}. Applied automatically at checkout.</>
-        ) : undefined
       }
     />
   );

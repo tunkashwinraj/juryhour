@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button, Field, Input } from "@/components/ui";
 import type { TierName } from "@/lib/constants";
-import type { LaunchOffer } from "@/lib/launch";
 import { track } from "@/lib/attribution";
 import { isValidEmail, type StoredPreview } from "./logic";
 import { usePreview } from "./PreviewProvider";
@@ -18,11 +17,9 @@ import styles from "./preview.module.css";
 export function PreviewPageClient({
   serverPreview,
   prices,
-  offer,
 }: {
   serverPreview: StoredPreview;
   prices?: Partial<Record<TierName, number | null>>;
-  offer?: LaunchOffer | null;
 }) {
   const ctx = usePreview();
   const mine = ctx.preview?.id === serverPreview.id ? ctx.preview : null;
@@ -102,7 +99,7 @@ export function PreviewPageClient({
               </Button>
             </form>
           ) : null}
-          <Upsell prices={prices} offer={offer} />
+          <Upsell prices={prices} />
         </>
       )}
       {p.status === "refused" ? <Link href="/#preview">Preview another page</Link> : null}

@@ -12,7 +12,6 @@ export const metadata = pageMetadata({
 
 export default function CompareWynterPage() {
   const P = TIERS.proof;
-  const X = TIERS.specialist;
   return (
     <HeadToHead
       slug="wynter"
@@ -24,11 +23,11 @@ export default function CompareWynterPage() {
       rows={[
         {
           label: "Audience",
-          us: "Real people screened by one question to match your buyer, via Terac; Specialist Jury for job, industry and seniority",
+          us: "Real people screened by one question to match your buyer, via Terac",
           them: WYNTER.audience,
         },
-        { label: "Price", us: `Fixed per test, Proof $${P.price} list; Specialist from $499 (quoted)`, them: WYNTER.price },
-        { label: "Turnaround", us: `Same day (Proof jury deadline ${P.deadlineHours} h); Specialist 24–72 h`, them: WYNTER.speed },
+        { label: "Price", us: `Fixed per test: Verdict $${P.price} launch offer`, them: WYNTER.price },
+        { label: "Turnaround", us: `Same day (Verdict jury deadline ${P.deadlineHours} h)`, them: WYNTER.speed },
         { label: "Test types", us: "First-impression test and A/B message test of your page vs a rewrite", them: WYNTER.tests },
         { label: "Writes copy for you", us: "Yes: a challenger from facts on your page, and the winning copy", them: WYNTER.rewrite },
         { label: "Respondents", us: "Real people only; answers graded by code and AI before they count", them: WYNTER.noAi },
@@ -41,7 +40,7 @@ export default function CompareWynterPage() {
           "A large panel of B2B professionals verified with real titles and companies at signup.",
           "More research formats: preference tests, surveys, brand tracking, interviews, pricing-page tests.",
           "Research advisors and managed projects on higher plans.",
-          `Larger samples per test than our ${P.jurors}-person Proof or ${X.jurors}-person Specialist Jury.`,
+          `Larger samples per test than our ${P.jurors}-person Verdict.`,
         ],
       }}
       weAreBetter={{
@@ -62,7 +61,6 @@ export default function CompareWynterPage() {
             studies. Use JuryHour if you want a same-day answer on one page for a fixed price, with a tested rewrite, or if
             your buyer isn&apos;t a narrow B2B role.
           </p>
-          <p>For a narrow professional buyer on JuryHour, choose the Specialist Jury.</p>
         </>
       }
     />

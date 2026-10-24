@@ -146,8 +146,8 @@ describe("submit_test", () => {
     const r = await call("submit_test", testBody(o.id));
     expect(r.body).toMatchObject({ ok: true, data: { quote_requested: true } });
     expect(row("orders", o.id).stage).toBe("QUOTING");
-    expect(fake.rows("panels")[0]).toMatchObject({ status: "quoting", requested_n: 15 });
-    expect(m.requestQuote).toHaveBeenCalledWith(expect.objectContaining({ panelDescription: PROFILE.panel_description, submissionCount: 15 }));
+    expect(fake.rows("panels")[0]).toMatchObject({ status: "quoting", requested_n: 20 });
+    expect(m.requestQuote).toHaveBeenCalledWith(expect.objectContaining({ panelDescription: PROFILE.panel_description, submissionCount: 20 }));
     expect(String(m.requestQuote.mock.calls[0][0].taskDescription).toLowerCase()).not.toContain("ledgerly");
     expect(fake.rows("agent_runs")[0].status).toBe("completed");
   });
@@ -158,6 +158,19 @@ describe("submit_test", () => {
     await refused("submit_test", testBody(o.id), "already_submitted", 409);
   });
   it("card_b required for proof/specialist", async () => await refused("submit_test", testBody(researching().id, { card_b: null }), "card_b_required"));
+  it("retest follows proof rules: card_b required, and a full test goes to a quote for 8 jurors", async () => {
+    await refused("submit_test", testBody(researching({ tier: "retest", price_usd: 59 }).id, { card_b: null }), "card_b_required");
+    const o = researching({ tier: "retest", price_usd: 59 });
+    const r = await call("submit_test", testBody(o.id));
+    expect(r.body).toMatchObject({ ok: true });
+    expect(fake.rows("tests").find((t) => t.order_id === o.id)).toMatchObject({ format: "proof" });
+    expect(fake.rows("panels").find((p) => p.order_id === o.id)).toMatchObject({ requested_n: 8 });
+  });
+  it("extra jurors raise the quoted panel size", async () => {
+    const o = researching({ extra_jurors: 5, price_usd: 299 + 35 });
+    expect((await call("submit_test", testBody(o.id))).body).toMatchObject({ ok: true });
+    expect(fake.rows("panels").find((p) => p.order_id === o.id)).toMatchObject({ requested_n: 25 });
+  });
   it("card_b forbidden for spark/pulse", async () =>
     await refused("submit_test", testBody(researching({ tier: "pulse", price_usd: 49 }).id), "card_b_forbidden"));
   it("questions.specialist must match the tier", async () =>
@@ -228,8 +241,8 @@ describe("launch_panel (every SPEC §12 check)", () => {
   it("success → opportunity created + launched, panel live, PANEL_LIVE", async () => {
     const { o, p } = quoting();
     const r = await call("launch_panel", launch(o));
-    expect(r.body).toMatchObject({ ok: true, data: { n: 15, budget_usd: 60 } });
-    expect(m.createOpportunity).toHaveBeenCalledWith(expect.objectContaining({ numParticipants: 15, screeningQuestions: PROFILE.screening_questions, filters: [] }));
+    expect(r.body).toMatchObject({ ok: true, data: { n: 20, budget_usd: 80 } });
+    expect(m.createOpportunity).toHaveBeenCalledWith(expect.objectContaining({ numParticipants: 20, screeningQuestions: PROFILE.screening_questions, filters: [] }));
     expect(row("panels", p.id).status).toBe("live");
     expect(row("orders", o.id).stage).toBe("PANEL_LIVE");
   });
@@ -247,10 +260,10 @@ describe("launch_panel (every SPEC §12 check)", () => {
   it("quote_infeasible", async () => await refused("launch_panel", launch(quoting({ panel: { status: "infeasible" } }).o), "quote_infeasible"));
   it("infeasible_cost (cpi 3× cap)", async () => await refused("launch_panel", launch(quoting({ panel: { cost_per_participant: 12 } }).o), "infeasible_cost", 422));
   it("n within [minJurors, jurors]", async () => {
-    await refused("launch_panel", launch(quoting().o, 9), "n_out_of_range");
-    await refused("launch_panel", launch(quoting().o, 16), "n_out_of_range");
+    await refused("launch_panel", launch(quoting().o, 13), "n_out_of_range");
+    await refused("launch_panel", launch(quoting().o, 21), "n_out_of_range");
   });
-  it("cpi·n ≤ cap", async () => await refused("launch_panel", launch(quoting({ panel: { cost_per_participant: 5 } }).o, 13), "over_cost_cap"));
+  it("cpi·n ≤ cap", async () => await refused("launch_panel", launch(quoting({ panel: { cost_per_participant: 5 } }).o, 17), "over_cost_cap"));
   it("margin ≥ 30%", async () => await refused("launch_panel", launch(quoting({ order: { price_usd: 80 } }).o), "margin_too_low"));
   it("launch budget ≥ $5", async () =>
     await refused("launch_panel", launch(quoting({ order: { tier: "spark", price_usd: 11 }, panel: { cost_per_participant: 1.5, requested_n: 3 } }).o), "budget_below_minimum"));
@@ -277,8 +290,8 @@ describe("launch_panel (every SPEC §12 check)", () => {
   it("shrink: procurement launches a smaller n within the cap", async () => {
     terac.cpi = 5;
     const { o } = quoting({ panel: { cost_per_participant: 5 } });
-    const r = await call("launch_panel", launch(o, 12));
-    expect(r.body).toMatchObject({ ok: true, data: { n: 12 } });
+    const r = await call("launch_panel", launch(o, 16));
+    expect(r.body).toMatchObject({ ok: true, data: { n: 16 } });
   });
 });
 
@@ -478,11 +491,13 @@ describe("pause / resume / change_price / ads", () => {
     expect(fake.rows("company_state")[0].sales_paused).toBe(false);
   });
   it("change_price: band, floor, once/24h", async () => {
-    await refused("change_price", { actor: "ceo", tier: "pulse", price: 30 }, "outside_price_band");
+    await refused("change_price", { actor: "ceo", tier: "proof", price: 220 }, "outside_price_band");
     await refused("change_price", { actor: "ceo", tier: "spark", price: 9 }, "below_cost_floor");
-    expect((await call("change_price", { actor: "ceo", tier: "pulse", price: 44 })).body).toMatchObject({ ok: true, data: { new_price: 44 } });
-    await refused("change_price", { actor: "ceo", tier: "pulse", price: 45 }, "price_changed_recently", 429);
+    await refused("change_price", { actor: "ceo", tier: "retest", price: 46 }, "below_cost_floor");
+    expect((await call("change_price", { actor: "ceo", tier: "proof", price: 279 })).body).toMatchObject({ ok: true, data: { new_price: 279 } });
+    await refused("change_price", { actor: "ceo", tier: "proof", price: 280 }, "price_changed_recently", 429);
     await refused("change_price", { actor: "ceo", tier: "specialist", price: 500 }, "unknown_tier", 404);
+    await refused("change_price", { actor: "ceo", tier: "pulse", price: 44 }, "tier_not_offered", 409);
   });
   it("set_ads_budget caps", async () => {
     await refused("set_ads_budget", { actor: "growth", daily_usd: 10 }, "campaign_required", 400);

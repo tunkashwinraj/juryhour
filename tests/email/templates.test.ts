@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { EMAIL_TEMPLATES, MARKETING_TEMPLATES, renderEmail, type EmailTemplate } from "@/emails/templates";
 import { EmailVarError, escapeHtml, FOOTER_LINE, oneLine, safeUrl } from "@/emails/layout";
 
@@ -69,10 +69,27 @@ describe("email templates", () => {
     expect(generic).toContain("$11");
   });
 
-  it("preview_followup_2 pitches Pulse at the constant price", () => {
-    const out = renderEmail("preview_followup_2", { preview_id: "p" }, ctx);
-    expect(out.text).toContain("Pulse ($49)");
-    expect(out.text).toContain("10 real people");
+  it("preview_followup_2 pitches the Verdict at the constant price, with HALF while it runs", () => {
+    vi.useFakeTimers({ now: new Date("2026-11-10T12:00:00Z"), toFake: ["Date"] });
+    try {
+      const out = renderEmail("preview_followup_2", { preview_id: "p" }, ctx);
+      expect(out.text).toContain("Verdict ($299 launch offer)");
+      expect(out.text).toContain("20 real people");
+      expect(out.text).toContain("Your first Verdict is $149 with code HALF through Nov 30");
+      expect(out.text).toContain("code=HALF");
+      vi.setSystemTime(new Date("2026-12-02T00:00:00Z"));
+      const later = renderEmail("preview_followup_2", { preview_id: "p" }, ctx);
+      expect(later.text).not.toContain("HALF");
+      for (const o of [out, later]) expect(`${o.subject} ${o.text}`).not.toMatch(/Spark|Pulse|Proof|Launch Pack|Specialist/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("preview_followup_1 names the Quick Read", () => {
+    const out = renderEmail("preview_followup_1", { preview_id: "p" }, ctx);
+    expect(out.text).toContain("Get a Quick Read for $11");
+    expect(`${out.subject} ${out.text}`).not.toMatch(/Spark|Pulse|Proof/);
   });
 
   it("partial: shows delivered count and refund amount", () => {
@@ -85,7 +102,7 @@ describe("email templates", () => {
     const out = renderEmail("quote_ready", VARS.quote_ready, ctx);
     expect(out.text).toContain("https://whop.com/checkout/plan_x?a=1&b=2");
     expect(out.html).toContain("https://whop.com/checkout/plan_x?a=1&amp;b=2");
-    expect(out.text).toMatch(/expires .*2026/);
+    expect(out.text).toContain("This quote expires at 8:00am ET, Mon Oct 26."); // 12:00Z = 8:00am EDT
     expect(renderEmail("quote_ready", { ...VARS.quote_ready, expires_at: null }, ctx).text).toContain("expires in 48 hours");
     expect(() => renderEmail("quote_ready", { ...VARS.quote_ready, purchase_url: "javascript:alert(1)" }, ctx)).toThrow(EmailVarError);
   });
@@ -110,3 +127,48 @@ describe("email templates", () => {
     expect(escapeHtml(`<a href="x">'&`)).toBe("&lt;a href=&quot;x&quot;&gt;&#39;&amp;");
   });
 });
+
+describe("order reference and ET times in transactional emails", () => {
+  const ID = "f9da6201-1234-4abc-8def-0123456789ab";
+  it("every transactional template carries the order reference in the subject and body", () => {
+    const cases: [EmailTemplate, Record<string, string | number>][] = [
+      ["paid", { token: "tok_abc", jurors: 20, order_id: ID }],
+      ["delivered", { token: "tok_abc", verdict: "B wins 14 of 20", n: 20, order_id: ID }],
+      ["partial", { token: "tok_abc", delivered_n: 16, ordered_n: 20, refund_usd: 59.8, order_id: ID }],
+      ["refunded", { refund_usd: 299, token: "tok_abc", order_id: ID }],
+      ["quote_ready", { token: "tok_abc", price_usd: 499, purchase_url: "https://whop.com/c/x", order_id: ID }],
+      ["support_reply", { body: "Thanks, we're on it.", token: "tok_abc", order_id: ID }],
+    ];
+    for (const [t, vars] of cases) {
+      const out = renderEmail(t, vars, ctx);
+      expect(out.subject).toMatch(/ · JH-F9DA6201$/);
+      expect(out.text).toContain("Order reference: JH-F9DA6201");
+      expect(out.html).toContain("JH-F9DA6201");
+    }
+    // without an order id (or with junk) there is no reference
+    expect(renderEmail("paid", { token: "tok_abc", order_id: "not-a-uuid" }, ctx).subject).toBe("Your jury is being assembled");
+    // marketing emails never carry one
+    expect(renderEmail("preview_followup_1", { preview_id: "p", order_id: ID }, ctx).subject).not.toContain("JH-");
+  });
+
+  it("paid: the ISO deadline reads as an ET clock time, with 'today' on the same ET day", () => {
+    vi.useFakeTimers({ now: new Date("2026-10-24T15:00:00Z"), toFake: ["Date"] });
+    try {
+      const today = renderEmail("paid", { token: "tok_abc", eta: "2026-10-24T23:03:58.014Z", order_id: ID }, ctx);
+      expect(today.text).toContain("Expected verdict: by 7:03pm ET today.");
+      expect(today.text).not.toContain("2026-10-24T");
+      const tomorrow = renderEmail("paid", { token: "tok_abc", eta: "2026-10-25T05:30:00Z" }, ctx);
+      expect(tomorrow.text).toContain("Expected verdict: by 1:30am ET, Sun Oct 25.");
+      expect(renderEmail("paid", { token: "tok_abc", eta: "about 4 hours" }, ctx).text).toContain("Expected verdict: about 4 hours.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("order_lookup lines start with the reference and use ET dates", () => {
+    const orders = JSON.stringify([{ id: ID, token: "tok_abcdefghijklmnop", tier: "proof", stage: "DELIVERED", created_at: "2026-10-25T02:00:00Z" }]);
+    const out = renderEmail("order_lookup", { orders }, ctx);
+    expect(out.text).toContain("JH-F9DA6201 · Verdict · Sat Oct 24 · Verdict delivered");
+  });
+});
+

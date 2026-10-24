@@ -42,9 +42,9 @@ function AgencyExtras() {
           </Card>
           <Card>
             <span className={kit.label}>ASK US</span>
-            <h3>Agency bundle (5 Proofs)</h3>
+            <h3>Agency bundle (5 Verdicts)</h3>
             <p className={kit.muted}>
-              Testing pages for several clients? We&apos;re setting up a bundle of 5 Proofs. There&apos;s no published price
+              Testing pages for several clients? We&apos;re setting up a bundle of 5 Verdicts. There&apos;s no published price
               yet; <Link href="/contact">ask us</Link> and we&apos;ll quote it.
             </p>
           </Card>
@@ -53,7 +53,7 @@ function AgencyExtras() {
 
       <Section id="free-proof" title="Can I try it on a live client page first?">
         <p className={kit.answer}>
-          Yes, you can apply for a free Proof on one live, public client page. Tell us the page and the client&apos;s
+          Yes, you can apply for a free Verdict on one live, public client page. Tell us the page and the client&apos;s
           buyer; we review requests and reply by email. Not every request is accepted, and you need the client&apos;s
           permission to submit their page.
         </p>
@@ -72,7 +72,7 @@ const seg: Segment = {
   problem: {
     title: "Why do agencies lose arguments about copy?",
     answer:
-      "Because it's your opinion against the client's. A verdict from 15 real people in the client's market settles the headline debate with evidence instead of taste.",
+      "Because it's your opinion against the client's. A verdict from 20 real people in the client's market settles the headline debate with evidence instead of taste.",
     points: [
       { label: "THE CLIENT", title: "Loves their tagline.", body: "Strangers who match the buyer may not understand it. Now you can show them." },
       { label: "THE REVIEW", title: "Goes round in circles.", body: "Rounds of feedback from people who already know the product." },
@@ -82,7 +82,7 @@ const seg: Segment = {
   example: {
     title: "What would a verdict look like for a client page?",
     answer:
-      "Here's an illustrative Proof for a client's accounting firm page. Card A is the client's copy; card B is the kind of challenger our agent writes, using only facts on the page.",
+      "Here's an illustrative Verdict for a client's accounting firm page. Card A is the client's copy; card B is the kind of challenger our agent writes, using only facts on the page.",
     a: {
       headline: "Your partner in financial excellence",
       subheadline: "Trusted solutions for businesses of every size, delivered with integrity and expertise.",
@@ -103,7 +103,7 @@ const seg: Segment = {
   highlight: "proof",
   pricingTitle: "What does a test on a client page cost?",
   pricingAnswer:
-    "The same fixed prices as everyone else. Proof is the one to put in front of a client: their page against our rewrite, judged by 15 real people.",
+    "The same fixed prices as everyone else. Verdict is the one to put in front of a client: their page against our rewrite, judged by 20 real people.",
   faqTitle: "Questions from agencies",
   faq: faqByIds(["client-pages", "white-label", "affiliate", "bundle", "codes", "anonymous", "refunds"]),
   extra: <AgencyExtras />,

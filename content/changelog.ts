@@ -5,9 +5,20 @@ export type ChangelogEntry = { date: string; title: string; items: string[] };
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-10-24",
-    title: "Website: launch price, partner codes, new pages",
+    title: "Simpler pricing",
     items: [
-      "Launch price for Proof, applied automatically at checkout until the stated end time.",
+      "Two plans: Quick Read ($11) and Verdict ($299 launch offer, 20 real people; regular $499 from Dec 1).",
+      "Code HALF: your first Verdict is $149 through Nov 30.",
+      "Extra jurors: add up to 20 to a Quick Read or Verdict at $7 each.",
+      "Older packages and add-ons are no longer sold. Orders already placed are delivered as bought.",
+      "A Quick Read still counts toward a Verdict if you upgrade within 24 hours, and it works with HALF.",
+    ],
+  },
+  {
+    date: "2026-10-24",
+    title: "Website: partner codes, new pages",
+    items: [
+      "A one-day launch offer on the recommended package (ended).",
       "Partner codes in links (like ?code=WHOP) are recorded for attribution. They don't change the price.",
       "New pages: how it works, sample report, pages for Whop sellers, Lovable builders and agencies, comparisons, FAQ, about, agents, affiliates, contact, verdicts and this changelog.",
     ],

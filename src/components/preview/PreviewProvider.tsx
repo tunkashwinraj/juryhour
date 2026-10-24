@@ -14,9 +14,11 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import type { AddonName } from "@/lib/constants";
-import { captureAttribution, track, type TrackEvent, type TrackEvents } from "@/lib/attribution";
+import type { PublicCoupon } from "@/lib/coupons";
+import { captureAttribution, getAttribution, track, type TrackEvent, type TrackEvents } from "@/lib/attribution";
 import {
+  clampExtraJurors,
+  couponFor,
   isCtaTier,
   isUuid,
   previewHref,
@@ -92,11 +94,18 @@ export type PreviewContextValue = {
   setSalesPaused(v: boolean): void;
   selectedTier: CtaTier | null;
   selectTier(t: CtaTier | null): void;
-  addons: AddonName[];
-  setAddons(a: AddonName[]): void;
-  /** Code typed into "Have a code?" (null = use the attributed ?code=). Attribution only, never a discount. */
+  /** Extra jurors (0–15, $7 each) for Quick Read / Verdict / Retest checkouts. */
+  extraJurors: number;
+  setExtraJurors(n: number): void;
+  /** Code typed into "Have a code?" (null = use the attributed ?code=). */
   code: string | null;
   setCode(c: string | null): void;
+  /** The code in effect: the typed one, else the attributed ?code= (read after mount). */
+  effectiveCode: string | null;
+  /** The running coupon (server-validated config, hidden once its end time passes), else null. */
+  coupon: PublicCoupon | null;
+  /** The coupon when the visitor's code matches it and it applies to `tier`, else null. */
+  appliedCoupon(tier: CtaTier): PublicCoupon | null;
   /** ?parent=<order id> from report-page upgrade/retest links. */
   parentOrderId: string | null;
   clearParent(): void;
@@ -109,26 +118,42 @@ export type PreviewContextValue = {
 
 const PreviewContext = createContext<PreviewContextValue | null>(null);
 
-export function PreviewProvider({ children }: { children: ReactNode }) {
+export function PreviewProvider({ children, coupon = null }: { children: ReactNode; coupon?: PublicCoupon | null }) {
   const preview = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [draftInput, setDraftInput] = useState<CheckoutInput | null>(null);
   const [salesPaused, setSalesPaused] = useState(false);
   const [selectedTier, selectTier] = useState<CtaTier | null>(null);
-  const [addons, setAddons] = useState<AddonName[]>([]);
+  const [extraJurors, setExtraJurorsRaw] = useState(0);
+  const setExtraJurors = useCallback((n: number) => setExtraJurorsRaw(clampExtraJurors(n)), []);
   const [code, setCode] = useState<string | null>(null);
+  const [attrCode, setAttrCode] = useState<string | null>(null);
+  const [couponLive, setCouponLive] = useState(true);
   const [urlState, setUrlState] = useState<{ parent: string | null; linked: string | null }>({ parent: null, linked: null });
   const forms = useRef<FormEntry[]>([]);
 
+  // Hide the coupon the moment it ends (the static shell can be minutes stale).
+  useEffect(() => {
+    if (!coupon) return;
+    const ms = Date.parse(coupon.endsAt) - Date.now();
+    const t = setTimeout(() => setCouponLive(false), Math.max(0, Math.min(ms, 2_147_000_000)));
+    return () => clearTimeout(t);
+  }, [coupon]);
+
   useEffect(() => {
     captureAttribution();
+    try {
+      // Browser-only state (stored attribution, URL params) is read after mount on purpose.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAttrCode(getAttribution().code ?? null);
+    } catch {
+      // no stored attribution
+    }
     try {
       const q = new URLSearchParams(window.location.search);
       const parent = q.get("parent");
       const linked = q.get("preview");
       const tier = q.get("tier");
       if (isUuid(parent) || isUuid(linked)) {
-        // Reading browser-only URL state after mount is the intent here.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setUrlState({ parent: isUuid(parent) ? parent : null, linked: isUuid(linked) ? linked : null });
       }
       if (isCtaTier(tier)) selectTier(tier);
@@ -161,6 +186,8 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
     window.location.assign(previewHref(opts.tier ?? null));
   }, []);
 
+  const effectiveCode = code ?? attrCode;
+  const liveCoupon = coupon && couponLive ? coupon : null;
   const value = useMemo<PreviewContextValue>(() => {
     const checkoutInput = preview && preview.status === "done" ? preview.input : draftInput ? { ...draftInput } : null;
     return {
@@ -176,17 +203,20 @@ export function PreviewProvider({ children }: { children: ReactNode }) {
       setSalesPaused,
       selectedTier,
       selectTier,
-      addons,
-      setAddons,
+      extraJurors,
+      setExtraJurors,
       code,
       setCode,
+      effectiveCode,
+      coupon: liveCoupon,
+      appliedCoupon: (tier) => couponFor(tier, liveCoupon, effectiveCode),
       parentOrderId: urlState.parent,
       clearParent: () => setUrlState((s) => ({ ...s, parent: null })),
       linkedPreviewId: urlState.linked,
       openForm,
       registerForm,
     };
-  }, [preview, draftInput, salesPaused, selectedTier, addons, code, urlState, openForm, registerForm]);
+  }, [preview, draftInput, salesPaused, selectedTier, extraJurors, setExtraJurors, code, effectiveCode, liveCoupon, urlState, openForm, registerForm]);
 
   return <PreviewContext.Provider value={value}>{children}</PreviewContext.Provider>;
 }
@@ -203,10 +233,13 @@ const FALLBACK: PreviewContextValue = {
   setSalesPaused: noop,
   selectedTier: null,
   selectTier: noop,
-  addons: [],
-  setAddons: noop,
+  extraJurors: 0,
+  setExtraJurors: noop,
   code: null,
   setCode: noop,
+  effectiveCode: null,
+  coupon: null,
+  appliedCoupon: () => null,
   parentOrderId: null,
   clearParent: noop,
   linkedPreviewId: null,

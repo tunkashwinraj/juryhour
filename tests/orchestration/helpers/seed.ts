@@ -41,7 +41,7 @@ export function seedBase(state: Row = {}) {
     id: 1, sales_paused: false, pause_reason: null, terac_balance_usd: 500,
     terac_balance_checked_at: new Date().toISOString(), human_interventions: 0, updated_at: new Date().toISOString(), ...state,
   });
-  for (const [tier, base] of [["spark", 11], ["pulse", 49], ["proof", 149], ["launch_pack", 199]] as const) {
+  for (const [tier, base] of [["spark", 11], ["pulse", 49], ["proof", 299], ["retest", 59], ["launch_pack", 199]] as const) {
     fake.insert("prices", { tier, base_usd: base, current_usd: base, min_usd: base * 0.75, max_usd: base * 1.25, last_changed_at: null });
   }
 }
@@ -72,7 +72,7 @@ export function seedPaidOrder(over: Row = {}): Row {
 }
 
 export function seedTest(order: Row, over: Row = {}): Row {
-  const format = ({ spark: "spark", pulse: "pulse", proof: "proof", launch_pack: "proof", specialist: "specialist" } as Record<string, string>)[String(order.tier)];
+  const format = ({ spark: "spark", pulse: "pulse", proof: "proof", retest: "proof", launch_pack: "proof", specialist: "specialist" } as Record<string, string>)[String(order.tier)];
   const r = fake.insert("tests", {
     order_id: order.id,
     card_a: CARD_A,

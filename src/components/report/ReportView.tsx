@@ -1,11 +1,13 @@
 // Verdict report (SPEC §9). Rendered only from orders.report + approved_responses + order_stats.
 // Jurors are anonymous ("Juror N"): nothing here can identify a person.
-import Link from "next/link";
 import type { Card } from "@/lib/types";
-import { REPORT_CAVEAT, TIERS, UPGRADE_CREDIT_HOURS } from "@/lib/constants";
+import { REPORT_CAVEAT, RETEST_WINDOW_DAYS, TIERS, UPGRADE_CREDIT_HOURS } from "@/lib/constants";
+import { supportEmail } from "@/lib/seo";
+import { couponPrice, type PublicCoupon } from "@/lib/coupons";
+import { orderRef } from "@/lib/order-ref";
 import type { JurorRow, ReportData } from "@/lib/queries";
 import { SandboxBadge } from "@/components/SiteHeader";
-import { cardToText, shareOnXUrl, tallyMarks, upgradeCredit, usd } from "@/components/rules";
+import { cardToText, retestOffer, shareOnXUrl, tallyMarks, upgradeCredit, usd } from "@/components/rules";
 import { CopyButton } from "./CopyButton";
 import { ShareControls } from "./ShareControls";
 
@@ -17,12 +19,16 @@ export function ReportView({
   appUrl,
   nowMs,
   prices,
+  coupon = null,
   sample = false,
 }: {
   data: ReportData & { report: NonNullable<ReportData["report"]> };
   appUrl: string;
   nowMs: number;
-  prices: { proof: number; pulse: number };
+  /** Current Verdict (proof) and Retest prices, for the upgrade and retest CTAs. */
+  prices: { proof: number; retest: number };
+  /** The running Verdict coupon (for the Quick Read upgrade CTA), if any. */
+  coupon?: PublicCoupon | null;
   /** /sample-report: an illustrative report. Hides share, upgrade and next-step CTAs; the page owns the H1. */
   sample?: boolean;
 }) {
@@ -39,7 +45,7 @@ export function ReportView({
         <Understanding key="u" rate={r.scorecard.understanding_rate_a} n={n} />,
         <Fixes key="f" fixes={r.top_fixes} title="Critique" />,
         r.rewritten_headline ? <RewrittenHeadline key="rh" text={r.rewritten_headline} /> : null,
-        sample ? null : <SparkUpgrade key="up" data={data} nowMs={nowMs} proofPrice={prices.proof} />,
+        sample ? null : <SparkUpgrade key="up" data={data} nowMs={nowMs} proofPrice={prices.proof} coupon={coupon} />,
         <Method key="m" caveats={r.method_caveats} n={n} hasB={false} />,
         sample ? null : <Share key="s" data={data} xUrl={xUrl} />,
       ]
@@ -51,7 +57,7 @@ export function ReportView({
         <StillUnsolved key="su" items={r.still_unsolved} />,
         <AllJurors key="all" jurors={data.jurors} hasB={hasB} />,
         <Method key="m" caveats={r.method_caveats} n={n} hasB={hasB} />,
-        sample ? null : <NextSteps key="cta" data={data} retestPrice={prices.pulse} />,
+        sample ? null : <NextSteps key="cta" data={data} nowMs={nowMs} retestPrice={prices.retest} />,
         sample ? null : <Share key="s" data={data} xUrl={xUrl} />,
       ];
 
@@ -76,6 +82,7 @@ function Verdict({
       <div className="status-head">
         <span className="badge">{sample ? "Example verdict" : "Your verdict"}</span>
         {sample ? null : <SandboxBadge mode={data.mode} />}
+        {sample ? null : <span className="small muted">Order {orderRef(data.orderId)}</span>}
       </div>
       {!sample && data.mode === "sandbox" ? (
         <p className="small muted">This report comes from a test order in the sandbox.</p>
@@ -212,7 +219,7 @@ function RewrittenHeadline({ text }: { text: string }) {
   return (
     <section aria-labelledby="rh-h">
       <h2 id="rh-h">A rewritten headline</h2>
-      <p className="muted">Not tested on people. Proof tests a full rewrite against your page.</p>
+      <p className="muted">Not tested on people. A Verdict tests a full rewrite against your page.</p>
       <div className="copy-card">
         <div className="h">{text}</div>
       </div>
@@ -358,11 +365,14 @@ function SparkUpgrade({
   data,
   nowMs,
   proofPrice,
+  coupon,
 }: {
   data: ReportData;
   nowMs: number;
   proofPrice: number;
+  coupon: PublicCoupon | null;
 }) {
+  const couponDue = coupon ? couponPrice(proofPrice, coupon.percentOff) : null;
   const c = upgradeCredit({
     paidAtIso: data.paidAt,
     sparkPaid: data.pricePaid,
@@ -374,19 +384,33 @@ function SparkUpgrade({
     <section aria-labelledby="up-h">
       <h2 id="up-h">Test a full rewrite on {TIERS.proof.jurors} people</h2>
       <p>
-        Proof writes a challenger version of your page and has {TIERS.proof.jurors} real people judge it against yours.
+        A Verdict writes a challenger version of your page and has {TIERS.proof.jurors} real people judge it against
+        yours, blind and in random order.
       </p>
       {c.eligible ? (
         <p>
-          Your {usd(c.credit)} Spark counts toward it for the next {c.hoursLeft}{" "}
+          Your {usd(c.credit)} counts toward a Verdict for the next {c.hoursLeft}{" "}
           {c.hoursLeft === 1 ? "hour" : "hours"}: <span className="num">{usd(proofPrice)} − {usd(c.credit)} = </span>
           <strong className="num">{usd(c.due)}</strong>.
         </p>
       ) : (
-        <p className="num">Proof is {usd(proofPrice)}.</p>
+        <p className="num">A Verdict is {usd(proofPrice)}.</p>
       )}
-      <a className="btn btn-primary" href={`/?parent=${data.orderId}#pricing`}>
-        Upgrade to Proof
+      {coupon && couponDue !== null ? (
+        <p>
+          First Verdict? Code {coupon.code} makes it <strong className="num">{usd(couponDue)}</strong>
+          {c.eligible ? (
+            <>
+              {" "}
+              and your {usd(c.credit)} still counts:{" "}
+              <strong className="num">{usd(Math.max(0, couponDue - c.credit))}</strong>
+            </>
+          ) : null}
+          . Enter it in &ldquo;Have a code?&rdquo; at checkout.
+        </p>
+      ) : null}
+      <a className="btn btn-primary" href={`/?tier=proof&parent=${data.orderId}#preview`}>
+        {c.eligible ? `Upgrade to a Verdict — your ${usd(c.credit)} counts for ${UPGRADE_CREDIT_HOURS}h` : "Get a Verdict"}
       </a>
     </section>
   );
@@ -410,19 +434,40 @@ function Method({ caveats, n, hasB }: { caveats: string; n: number; hasB: boolea
   );
 }
 
-function NextSteps({ data, retestPrice }: { data: ReportData; retestPrice: number }) {
+function NextSteps({ data, nowMs, retestPrice }: { data: ReportData; nowMs: number; retestPrice: number }) {
+  const offer = retestOffer({
+    tier: data.tier,
+    stage: data.stage,
+    deliveredAtIso: data.deliveredAt,
+    retestUsed: data.retestUsed,
+    nowMs,
+    windowDays: RETEST_WINDOW_DAYS,
+  });
+  // Retired launch_pack orders included one retest: it is arranged by support, not sold again.
+  const includedRetest = data.tier === "launch_pack";
   return (
     <section aria-labelledby="next-h">
       <h2 id="next-h">Next</h2>
+      {offer.eligible ? (
+        <p>
+          Changed your page? A Retest puts your updated page in front of {TIERS.retest.jurors} new real people, against a
+          fresh rewrite. Available for {offer.daysLeft} more {offer.daysLeft === 1 ? "day" : "days"}, once per Verdict.
+        </p>
+      ) : null}
+      {includedRetest ? (
+        <p>Your order includes one retest. Email us when your page is updated and we&apos;ll set it up.</p>
+      ) : null}
       <div className="cta-row">
-        <a className="btn btn-primary" href={`/?parent=${data.orderId}#pricing`}>
-          {data.tier === "launch_pack"
-            ? "Use your included retest after you update"
-            : `Retest after you update (${usd(retestPrice)})`}
-        </a>
-        <Link className="btn" href="/#specialist">
-          Specialist Jury
-        </Link>
+        {offer.eligible ? (
+          <a className="btn btn-primary" href={`/?tier=retest&parent=${data.orderId}#preview`}>
+            Retest your updated page — {usd(retestPrice)}
+          </a>
+        ) : null}
+        {includedRetest ? (
+          <a className="btn btn-primary" href={`mailto:${supportEmail()}?subject=${encodeURIComponent("Included retest")}`}>
+            Ask for your included retest
+          </a>
+        ) : null}
       </div>
     </section>
   );

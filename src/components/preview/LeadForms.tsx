@@ -150,7 +150,7 @@ export function OrderLookupForm() {
   );
 }
 
-/** /for/agencies: "free Proof on one live client page" offer. Writes a lead row; no marketing email. */
+/** /for/agencies: "free Verdict on one live client page" offer. Writes a lead row; no marketing email. */
 export function AgencyOfferForm() {
   const id = useId();
   const [email, setEmail] = useState("");
@@ -179,7 +179,7 @@ export function AgencyOfferForm() {
       hp,
     });
     if ((res.body as { ok?: boolean } | null)?.ok) {
-      setStatus({ kind: "done", message: "Thanks. We've got your request and will reply by email about your free Proof." });
+      setStatus({ kind: "done", message: "Thanks. We've got your request and will reply by email about your free Verdict." });
     } else {
       setStatus({ kind: "error", message: errorMessage(res.status, res.body) });
     }
@@ -218,9 +218,10 @@ export function AgencyOfferForm() {
       </Field>
       <Honeypot value={hp} onChange={setHp} />
       <Button type="submit" disabled={status.kind === "busy"}>
-        {status.kind === "busy" ? "Sending…" : "Request my free Proof"}
+        {status.kind === "busy" ? "Sending…" : "Request my free Verdict"}
       </Button>
       <StatusLine status={status} />
     </form>
   );
 }
+

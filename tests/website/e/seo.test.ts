@@ -86,28 +86,25 @@ describe("JSON-LD", () => {
     expect(websiteLd()["@type"]).toBe("WebSite");
   });
 
-  it("productOffersLd has one USD Offer per priced tier and the launch offer with priceValidUntil", () => {
-    const prices = { spark: 11, pulse: 49, proof: 149, launch_pack: 199, specialist: null };
-    const endsAt = "2026-10-24T22:00:00.000Z";
-    const ld = productOffersLd(prices, { tier: "proof", priceUsd: 99, normalUsd: 149, endsAt, code: "TODAY99" }) as {
-      "@type": string;
-      offers: Record<string, unknown>[];
-    };
+  it("productOffersLd has one USD Offer per public plan (Quick Read, Verdict) and nothing else", () => {
+    const prices = { spark: 11, pulse: 49, proof: 299, retest: 59, launch_pack: 199, specialist: null };
+    const ld = productOffersLd(prices) as { "@type": string; offers: Record<string, unknown>[] };
     expect(ld["@type"]).toBe("Product");
-    expect(ld.offers).toHaveLength(5);
+    expect(ld.offers).toHaveLength(2);
     for (const o of ld.offers) {
       expect(o["@type"]).toBe("Offer");
       expect(o.priceCurrency).toBe("USD");
       expect(String(o.availability)).toMatch(/^https:\/\/schema\.org\//);
     }
-    expect(ld.offers.map((o) => o.price)).toEqual(["11.00", "49.00", "149.00", "199.00", "99.00"]);
-    expect(ld.offers[4].priceValidUntil).toBe(endsAt);
-    const none = productOffersLd(prices, null) as { offers: unknown[] };
-    expect(none.offers).toHaveLength(4);
+    expect(ld.offers.map((o) => o.price)).toEqual(["11.00", "299.00"]);
+    expect(ld.offers.map((o) => String(o.name).split(" (")[0])).toEqual(["Quick Read", "Verdict"]);
+    const text = JSON.stringify(ld);
+    expect(text).not.toMatch(/Spark|Pulse|Proof|Launch Pack|Retest|Specialist|HALF/);
+    expect((productOffersLd({ proof: 279 }) as { offers: { price?: string }[] }).offers[1].price).toBe("279.00");
   });
 
   it("productOffersLd falls back to TIERS prices", () => {
-    const ld = productOffersLd({}, null) as { offers: { price: string }[] };
+    const ld = productOffersLd({}) as { offers: { price: string }[] };
     expect(ld.offers[0].price).toBe(TIERS.spark.price.toFixed(2));
   });
 

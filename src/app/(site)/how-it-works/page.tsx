@@ -54,7 +54,7 @@ export default function HowItWorksPage() {
           <li>
             <strong>An agent researches and writes.</strong> It reads your page, looks up how your market talks, and
             writes two short cards: <em>A</em>, your message as faithfully as possible, and <em>B</em>, a challenger
-            that uses only facts already on your page (Proof, Launch Pack and Specialist). It also writes a one-line
+            that uses only facts already on your page (Verdict). It also writes a one-line
             description of your buyer and a screening question.
           </li>
           <li>
@@ -94,9 +94,8 @@ export default function HowItWorksPage() {
         <TimerBar seconds={CARD_REVEAL_SECONDS} label={`A card is visible for ${CARD_REVEAL_SECONDS} seconds`} />
         <div className={kit.prose} style={{ marginTop: 16 }}>
           <p>
-            In Proof, Launch Pack and Specialist, each juror sees both cards, one after the other. Which card comes
-            first is chosen at random for each juror, so the order doesn&apos;t decide the winner. Spark and Pulse show
-            only your card.
+            In a Verdict, each juror sees both cards, one after the other. Which card comes first is chosen at random for
+            each juror, so the order doesn&apos;t decide the winner. Quick Read shows only your card.
           </p>
           <p>
             Jurors aren&apos;t told which card is the original, and they never see your site or who submitted it.
@@ -148,7 +147,7 @@ export default function HowItWorksPage() {
         <div className={kit.tableScroll} style={{ marginTop: 24 }}>
           <table className={kit.table}>
             <caption className={kit.label} style={{ textAlign: "left", captionSide: "top" }}>
-              After both cards (Proof, Launch Pack, Specialist)
+              After both cards (Verdict)
             </caption>
             <thead>
               <tr>
@@ -171,15 +170,6 @@ export default function HowItWorksPage() {
               </tr>
             </tbody>
           </table>
-        </div>
-        <div className={kit.prose} style={{ marginTop: 16 }}>
-          <p>Specialist Jury adds:</p>
-          <ul>
-            <li>Would you buy something like this? (yes / maybe / no) and Why or why not?</li>
-            <li>What would stop you from buying it?</li>
-            <li>For what it offers, would you expect the price to feel… (low / fair / high) and what would you expect to pay?</li>
-            <li>In your own words, describe the problem this is trying to solve.</li>
-          </ul>
         </div>
       </Section>
 
@@ -266,7 +256,7 @@ export default function HowItWorksPage() {
           </li>
           <li>
             <strong>Audience match.</strong> Jurors qualify by answering a screening question. That narrows the panel
-            but it&apos;s self-reported. For buyers defined by job, industry or seniority, use the Specialist Jury.
+            but it&apos;s self-reported, so treat a narrow B2B audience match as approximate.
           </li>
           <li>
             <strong>Words, not design.</strong> Jurors judge your message as text. Layout, images, speed and price

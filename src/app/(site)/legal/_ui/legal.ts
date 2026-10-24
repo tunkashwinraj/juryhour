@@ -8,7 +8,7 @@ export const NOT_LEGAL_ADVICE =
 export const DRAFT_NOTE = "Draft — pending founder review.";
 
 /** Governing law placeholder for the founder to fill (WEBSITE_SPEC §8). */
-export const GOVERNING_LAW = "[STATE]";
+export const GOVERNING_LAW = "New York";
 
 export const LEGAL_PAGES = [
   { path: "/legal/privacy", name: "Privacy policy", summary: "What we collect from customers and jurors, who processes it, and how to delete it." },

@@ -16,164 +16,143 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { resetEnvCache } from "@/lib/env";
 import { getPricingSnapshot } from "@/lib/marketing-data";
 import {
-  SOLD_ADDONS,
+  EXTRA_JURORS_LINE,
   TIER_ORDER,
   UPGRADE_CREDIT_LINE,
+  VERDICT_LAUNCH_NOTE,
   buildTierViews,
+  couponAdLine,
+  couponEndsLabel,
   featureRows,
-  formatEtTime,
-  offerEndsLabel,
+  verdictCouponPrice,
 } from "@/components/pricing/pricing-data";
 import { PRICING_FAQ } from "@/components/pricing/pricing-faq";
 import { HOME_FAQ, compareRows } from "@/components/marketing/home-content";
+import { PreviewProvider } from "@/components/preview/PreviewProvider";
 import { TIERS, type TierName } from "@/lib/constants";
-import type { LaunchOffer } from "@/lib/launch";
+import { HALF_DEFAULT } from "@/lib/coupons";
 
-const CONSTANT_PRICES = Object.fromEntries(TIER_ORDER.map((t) => [t, TIERS[t].price])) as Record<
+const CONSTANT_PRICES = Object.fromEntries((["spark", "proof", "retest"] as TierName[]).map((t) => [t, TIERS[t].price])) as Record<
   TierName,
   number | null
 >;
-const OFFER: LaunchOffer = { tier: "proof", priceUsd: 99, normalUsd: 149, endsAt: "2026-10-24T22:00:00.000Z", code: "TODAY99" };
-
-function setOfferEnv(endsAt: string | undefined) {
-  if (endsAt === undefined) delete process.env.LAUNCH_OFFER_ENDS_AT;
-  else process.env.LAUNCH_OFFER_ENDS_AT = endsAt;
-  resetEnvCache();
-}
+const OLD_NAMES = /Spark|Pulse|Proof|Launch Pack|Specialist/;
 
 beforeEach(() => {
   resolver = () => ({ data: [] });
   dbThrows = false;
 });
 afterEach(() => {
-  setOfferEnv(undefined);
+  delete process.env.COUPON_HALF_ENDS_AT;
   vi.useRealTimers();
 });
 
 describe("buildTierViews", () => {
-  it("lists the five tiers in order with Proof recommended and Specialist from $499", () => {
-    const v = buildTierViews(CONSTANT_PRICES, null);
-    expect(v.map((t) => t.name)).toEqual(["Spark", "Pulse", "Proof", "Launch Pack", "Specialist Jury"]);
-    expect(v.map((t) => t.price)).toEqual([11, 49, 149, 199, 499]);
+  it("lists exactly two public plans with Verdict recommended", () => {
+    const v = buildTierViews(CONSTANT_PRICES);
+    expect(TIER_ORDER).toEqual(["spark", "proof"]);
+    expect(v.map((t) => t.name)).toEqual(["Quick Read", "Verdict"]);
+    expect(v.map((t) => t.price)).toEqual([11, 299]);
+    expect(v.map((t) => t.jurors)).toEqual([3, 20]);
     expect(v.filter((t) => t.recommended).map((t) => t.tier)).toEqual(["proof"]);
-    expect(v[4]).toMatchObject({ fromPrice: true, jurors: null });
-    expect(v.every((t) => t.compareAt === null && t.offer === null)).toBe(true);
   });
 
-  it("shows the launch price with the normal price while the offer is on", () => {
-    const proof = buildTierViews(CONSTANT_PRICES, OFFER).find((t) => t.tier === "proof")!;
-    expect(proof).toMatchObject({ price: 99, compareAt: 149, normalPrice: 149 });
-    expect(proof.offer).toEqual({ endsAt: OFFER.endsAt, priceUsd: 99, normalUsd: 149 });
+  it("uses DB prices when present", () => {
+    expect(buildTierViews({ ...CONSTANT_PRICES, proof: 279 }).find((t) => t.tier === "proof")?.price).toBe(279);
   });
 
-  it("uses DB prices when present, and ignores an offer that isn't a discount", () => {
-    const v = buildTierViews({ ...CONSTANT_PRICES, proof: 129 }, OFFER);
-    expect(v.find((t) => t.tier === "proof")).toMatchObject({ price: 99, compareAt: 129 });
-    const noDiscount = buildTierViews({ ...CONSTANT_PRICES, proof: 89 }, OFFER).find((t) => t.tier === "proof")!;
-    expect(noDiscount).toMatchObject({ price: 89, compareAt: null, offer: null });
+  it("feature table: one cell per plan, launch-offer note, extra jurors, no Retest", () => {
+    const rows = featureRows(buildTierViews(CONSTANT_PRICES));
+    for (const row of rows) expect(row.cells).toHaveLength(TIER_ORDER.length);
+    expect(rows[0].cells).toEqual(["$11", "$299 launch offer · regular $499 from Dec 1"]);
+    expect(rows.map((r) => r.label).join(" ")).not.toMatch(/retest/i);
+    expect(rows.find((r) => r.label.startsWith("Extra jurors"))?.cells).toEqual(["$7 each", "$7 each"]);
   });
+});
 
-  it("feature table has one cell per tier in every row", () => {
-    for (const row of featureRows(buildTierViews(CONSTANT_PRICES, null))) {
-      expect(row.cells).toHaveLength(TIER_ORDER.length);
-    }
+describe("Verdict launch copy and HALF display", () => {
+  it("states the launch offer without a strike-through or 'was' price", () => {
+    expect(VERDICT_LAUNCH_NOTE).toBe("launch offer · regular $499 from Dec 1");
+  });
+  it("HALF: $149 through Nov 30", () => {
+    expect(verdictCouponPrice(CONSTANT_PRICES, HALF_DEFAULT)).toBe(149);
+    expect(couponEndsLabel(HALF_DEFAULT.endsAt)).toBe("Nov 30");
+    expect(couponAdLine(CONSTANT_PRICES, HALF_DEFAULT)).toBe("First Verdict? Code HALF makes it $149 through Nov 30.");
   });
 });
 
 describe("getPricingSnapshot", () => {
   it("falls back to constants when the prices read fails", async () => {
     resolver = () => ({ error: { message: "boom" } });
-    const snap = await getPricingSnapshot();
-    expect(snap.prices).toEqual(CONSTANT_PRICES);
+    expect((await getPricingSnapshot()).prices).toEqual(CONSTANT_PRICES);
     dbThrows = true;
     expect((await getPricingSnapshot()).prices).toEqual(CONSTANT_PRICES);
   });
 
   it("takes prices from the prices table", async () => {
-    resolver = (q) => (q.table === "prices" ? { data: [{ tier: "pulse", current_usd: "55" }] } : { data: [] });
-    expect((await getPricingSnapshot()).prices.pulse).toBe(55);
+    resolver = (q) => (q.table === "prices" ? { data: [{ tier: "proof", current_usd: "279" }] } : { data: [] });
+    expect((await getPricingSnapshot()).prices.proof).toBe(279);
   });
 
-  it("offer on: Proof $99 normally $149", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-24T18:00:00Z"), toFake: ["Date"] });
-    setOfferEnv("2026-10-24T22:00:00Z");
-    const { offer } = await getPricingSnapshot();
-    expect(offer).toMatchObject({ tier: "proof", priceUsd: 99, normalUsd: 149, endsAt: "2026-10-24T22:00:00.000Z" });
-  });
-
-  it("offer expired or unset: no offer", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-24T22:00:01Z"), toFake: ["Date"] });
-    setOfferEnv("2026-10-24T22:00:00Z");
-    expect((await getPricingSnapshot()).offer).toBeNull();
-    setOfferEnv(undefined);
-    expect((await getPricingSnapshot()).offer).toBeNull();
+  it("carries HALF until 2026-12-01T05:00Z (end of Nov 30 ET), then none", async () => {
+    vi.useFakeTimers({ now: new Date("2026-11-30T23:00:00Z"), toFake: ["Date"] });
+    expect((await getPricingSnapshot()).coupon).toMatchObject({ code: "HALF", tier: "proof", percentOff: 50, firstOrderOnly: true });
+    vi.setSystemTime(new Date("2026-12-01T05:00:00Z"));
+    expect((await getPricingSnapshot()).coupon).toBeNull();
   });
 });
 
-describe("offer wording", () => {
-  it("formats the real end time in Eastern time", () => {
-    expect(formatEtTime("2026-10-24T22:00:00Z")).toBe("6:00pm ET");
-    expect(offerEndsLabel("2026-10-24T22:00:00Z", new Date("2026-10-24T15:00:00Z"))).toBe("until 6:00pm ET today");
-    expect(offerEndsLabel("2026-10-25T22:00:00Z", new Date("2026-10-24T15:00:00Z"))).toBe("until 6:00pm ET on Oct 25");
-  });
-});
-
-describe("no second-page add-on and no code discounts", () => {
-  it("sells only +5 jurors ($15) and Rush ($9)", () => {
-    expect(SOLD_ADDONS.map((a) => [a.key, a.price])).toEqual([
-      ["extra5", 15],
-      ["rush", 9],
-    ]);
-    expect(UPGRADE_CREDIT_LINE).toBe("Your Spark counts toward Proof if you upgrade within 24 hours.");
+describe("copy rules", () => {
+  it("lines under the plans", () => {
+    expect(UPGRADE_CREDIT_LINE).toBe("Your $11 counts toward a Verdict for 24 hours.");
+    expect(EXTRA_JURORS_LINE).toBe("Add up to 20 extra jurors to a Quick Read or Verdict at $7 each.");
   });
 
-  it("never mentions a second page anywhere in pricing or home copy", () => {
+  it("never shows retired names, packs, a second page, popularity claims or Retest", () => {
     const text = JSON.stringify([
-      SOLD_ADDONS,
-      buildTierViews(CONSTANT_PRICES, OFFER),
-      featureRows(buildTierViews(CONSTANT_PRICES, null)),
-      PRICING_FAQ.map((f) => f.aText),
-      HOME_FAQ.map((f) => f.aText),
-      compareRows("$11–$199"),
-    ]).toLowerCase();
-    expect(text).not.toContain("second page");
-    expect(text).not.toContain("most chosen");
+      buildTierViews(CONSTANT_PRICES),
+      featureRows(buildTierViews(CONSTANT_PRICES)),
+      PRICING_FAQ.map((f) => [f.q, f.aText]),
+      HOME_FAQ.map((f) => [f.q, f.aText]),
+      compareRows("$11 or $299 per test"),
+    ]);
+    expect(text).not.toMatch(OLD_NAMES);
+    expect(text).not.toMatch(/\$990|packs|TODAY50|second page|most chosen|most popular/i);
+    expect(text).not.toMatch(/retest/i);
+    expect(text).not.toMatch(/was \$499|normally/i);
   });
 });
 
 describe("PricingSection render", () => {
-  async function html(el: Promise<React.ReactElement> | React.ReactElement) {
+  async function html(el: React.ReactElement) {
     const { renderToReadableStream } = await import("react-dom/server");
-    const stream = await renderToReadableStream(await el);
+    const stream = await renderToReadableStream(el);
     await stream.allReady;
-    return new Response(stream).text();
+    return (await new Response(stream).text()).replace(/<!-- -->/g, "");
   }
-
-  it("server-renders all tiers with the launch price and no loading state", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-24T18:00:00Z"), toFake: ["Date"] });
-    setOfferEnv("2026-10-24T22:00:00Z");
+  const render = async (coupon: typeof HALF_DEFAULT | null) => {
     const { PricingSection } = await import("@/components/pricing/PricingSection");
-    const out = await html(PricingSection({}));
-    for (const name of ["Spark", "Pulse", "Proof", "Launch Pack", "Specialist Jury", "Recommended"]) {
-      expect(out).toContain(name);
+    const section = await PricingSection({});
+    return html(<PreviewProvider coupon={coupon}>{section}</PreviewProvider>);
+  };
+
+  it("server-renders the two plans, the launch note, HALF with its end date and extras, with no loading state", async () => {
+    const out = await render(HALF_DEFAULT);
+    for (const s of ["Quick Read", "Verdict", "Recommended", "$11", "$299", "$499 from Dec 1", "HALF", "$149", "through Nov 30", "$7 each", "Have a code?"]) {
+      expect(out).toContain(s);
     }
-    expect(out).toContain("$99");
-    expect(out).toMatch(/normally[\s\S]*\$149/);
-    expect(out).toContain("until 6:00pm ET today");
-    expect(out).toContain("Your Spark counts toward Proof if you upgrade within 24 hours.");
+    expect(out).toContain("Your $11 counts toward a Verdict for 24 hours.");
+    expect(out).not.toMatch(OLD_NAMES);
+    expect(out).not.toMatch(/retest|\$990|TODAY50|normally|<s>|Most popular/i);
     expect(out.toLowerCase()).not.toContain("loading");
-    expect(out.toLowerCase()).not.toContain("second page");
-    expect(out).not.toContain("Most chosen");
   });
 
-  it("shows normal prices without an offer", async () => {
-    const { PricingSection } = await import("@/components/pricing/PricingSection");
-    const out = await html(PricingSection({}));
-    expect(out).not.toContain("$99");
-    expect(out).not.toContain("normally");
-    expect(out).toContain("$149");
+  it("without a running coupon: launch price only", async () => {
+    const out = await render(null);
+    expect(out).toContain("$299");
+    expect(out).not.toContain("HALF");
+    expect(out).not.toContain("$149");
   });
 });

@@ -71,7 +71,7 @@ export type ProgressStep = { key: string; label: string; state: StepState };
 
 /**
  * Progress steps (SPEC §9): Paid → Researching → Writing challenger → Jury X of N → Verdict ready.
- * Spark/Pulse have no challenger card, so step 3 reads "Writing your test".
+ * Quick Read (spark) and retired Pulse have no challenger card, so step 3 reads "Writing your test".
  */
 export function progressSteps(i: {
   stage: Stage;
@@ -79,7 +79,8 @@ export function progressSteps(i: {
   approvedN: number;
   requestedN: number | null;
 }): ProgressStep[] {
-  const hasChallenger = i.tier === "proof" || i.tier === "launch_pack" || i.tier === "specialist";
+  const format = i.tier in TIERS ? TIERS[i.tier as TierName].format : null;
+  const hasChallenger = format === "proof" || format === "specialist";
   const n = i.requestedN ?? jurorsForTier(i.tier);
   const labels = [
     { key: "paid", label: "Paid ✅" },
@@ -275,7 +276,7 @@ export function tallyMarks(preferA: number | null, preferB: number | null, n: nu
   return [...Array(b).fill("B"), ...Array(a).fill("A"), ...Array(rest).fill("none")];
 }
 
-/** Spark → Proof upgrade credit shown on the Spark report (pricing truth lives in B's computePrice). */
+/** Quick Read → Verdict upgrade credit shown on the Quick Read report (pricing truth lives in lib/pricing computePrice). */
 export function upgradeCredit(i: {
   paidAtIso: string | null;
   sparkPaid: number | null;
@@ -289,6 +290,28 @@ export function upgradeCredit(i: {
   const left = paid + i.windowHours * 3_600_000 - i.nowMs;
   if (left <= 0) return { eligible: false, credit: 0, due: i.proofPrice, hoursLeft: 0 };
   return { eligible: true, credit, due: r2(Math.max(0, i.proofPrice - credit)), hoursLeft: Math.ceil(left / 3_600_000) };
+}
+
+/**
+ * Retest offer shown on a Verdict report (pricing truth lives in lib/pricing retestRefusal, which
+ * /api/checkout enforces): Verdict (proof) orders that are DELIVERED or PARTIAL, delivered within
+ * windowDays, and not retested yet.
+ */
+export function retestOffer(i: {
+  tier: string;
+  stage: Stage;
+  deliveredAtIso: string | null;
+  retestUsed: boolean;
+  nowMs: number;
+  windowDays: number;
+}): { eligible: boolean; daysLeft: number } {
+  const no = { eligible: false, daysLeft: 0 };
+  if (i.tier !== "proof" || (i.stage !== "DELIVERED" && i.stage !== "PARTIAL") || i.retestUsed) return no;
+  const delivered = i.deliveredAtIso ? Date.parse(i.deliveredAtIso) : NaN;
+  if (Number.isNaN(delivered)) return no;
+  const left = delivered + i.windowDays * 86_400_000 - i.nowMs;
+  if (left <= 0) return no;
+  return { eligible: true, daysLeft: Math.ceil(left / 86_400_000) };
 }
 
 /** Plain-text version of a Card for the "Copy" button. */

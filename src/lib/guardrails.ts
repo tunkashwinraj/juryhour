@@ -57,14 +57,23 @@ export type PanelSpec = {
 };
 
 /**
- * Juror counts and cost cap for an order. `extra5` adds ADDON_EXTRA_JURORS and raises the cap pro rata;
- * `rush` halves the deadline. Specialist has no fixed cap: it is whatever keeps the 30% margin floor
+ * Juror counts and cost cap for an order, keyed by tier (retest has its own jurors/cap/deadline and the
+ * proof format). Paid `extra_jurors` raise the panel size and the cap pro rata (tier cap / tier jurors ×
+ * jurors), so the launch-time margin check (checkLaunch) covers them. Historical orders only: `extra5` adds ADDON_EXTRA_JURORS and raises the cap pro rata;
+ * `rush` halves the deadline (add-ons are no longer sold). Specialist has no fixed cap: it is whatever keeps the 30% margin floor
  * at the quoted price (price·(1−MARGIN_FLOOR) − Whop fee).
  */
-export function panelSpec(order: { tier: TierName; addons: readonly AddonName[] | null; price_usd: number | null }): PanelSpec {
+export function panelSpec(order: {
+  tier: TierName;
+  addons: readonly AddonName[] | null;
+  price_usd: number | null;
+  /** Paid extra jurors (0–15); missing on rows from before migration 0006 → 0. */
+  extra_jurors?: number | null;
+}): PanelSpec {
   const t = TIERS[order.tier];
   const addons = order.addons ?? [];
-  const extra = addons.includes("extra5") ? ADDON_EXTRA_JURORS : 0;
+  const paidExtra = Math.max(0, Math.trunc(Number(order.extra_jurors ?? 0)) || 0);
+  const extra = (addons.includes("extra5") ? ADDON_EXTRA_JURORS : 0) + (t.jurorCostCap !== null ? paidExtra : 0);
   const maxJurors = t.jurors + extra;
   const price = Number(order.price_usd ?? 0);
   const costCap =
@@ -229,6 +238,7 @@ export function checkPriceChange(i: {
   if (!i.row || !(i.tier in TIERS) || TIERS[i.tier as TierName].price === null) {
     refuse("unknown_tier", `tier '${i.tier}' has no adjustable price`, 404);
   }
+  if (!TIERS[i.tier as TierName].sold) refuse("tier_not_offered", `tier '${i.tier}' is retired and not sold`, 409);
   const row = i.row;
   const price = round2(i.price);
   if (!(price > 0)) refuse("invalid_price", "price must be > 0", 400);

@@ -29,7 +29,7 @@ const seg: Segment = {
   example: {
     title: "What would a verdict look like for a weekend SaaS?",
     answer:
-      "Here's an illustrative Proof for a habit-tracking app built in a weekend. Card A is the generated page; card B is the kind of challenger our agent writes, using only facts on the page.",
+      "Here's an illustrative Verdict for a habit-tracking app built in a weekend. Card A is the generated page; card B is the kind of challenger our agent writes, using only facts on the page.",
     a: {
       headline: "Transform your life with AI",
       subheadline: "The all-in-one AI-powered platform to streamline your goals and unlock your potential.",
@@ -47,10 +47,10 @@ const seg: Segment = {
       { juror: 9, text: "No app to install is the thing that would make me try it." },
     ],
   },
-  highlight: "spark",
+  highlight: "proof",
   pricingTitle: "Which package should a weekend project start with?",
   pricingAnswer:
-    "Spark is the cheapest way to hear from real people tonight: 3 people react to your headline and you get a rewritten headline. When you're about to spend on ads or a launch, Proof tests your whole hero against our rewrite on 15 people.",
+    "Quick Read is the cheapest way to hear from real people tonight: 3 people react to your headline and you get a rewritten headline. When you're about to spend on ads or a launch, Verdict tests your whole hero against our rewrite on 20 people.",
   faqTitle: "Questions from indie builders",
   faq: faqByIds(["preview", "what-tested", "edit-site", "how-fast", "upgrade", "codes", "unreleased"]),
 };

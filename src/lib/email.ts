@@ -111,6 +111,8 @@ export async function sendEmail(i: SendEmailInput): Promise<SendEmailResult> {
     {
       from: e.RESEND_FROM,
       to,
+      // verdict@ is send-only; customer replies go to the real inbox
+      replyTo: e.NEXT_PUBLIC_SUPPORT_EMAIL,
       subject,
       html,
       text,

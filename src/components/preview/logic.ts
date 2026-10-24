@@ -1,19 +1,37 @@
 // Pure, framework-free logic for the preview + checkout UX (unit-tested in tests/website/c).
 // No React, no DOM: storage is passed in so tests can fake it.
-import { TIERS, type AddonName, type TierName } from "@/lib/constants";
+import {
+  EXTRA_JUROR_TIERS,
+  MAX_EXTRA_JURORS,
+  PUBLIC_TIER_LABELS,
+  TIERS,
+  type BUYABLE_TIERS,
+  type TierName,
+} from "@/lib/constants";
+import { sameCode, type PublicCoupon } from "@/lib/coupons";
 
-export type BuyableTier = "spark" | "pulse" | "proof" | "launch_pack";
+/** Fixed-price tiers sold at checkout: Quick Read (spark), Verdict (proof), Retest (retest). */
+export type BuyableTier = (typeof BUYABLE_TIERS)[number];
 export type CtaTier = BuyableTier | "specialist";
-export const CTA_TIERS: readonly CtaTier[] = ["spark", "pulse", "proof", "launch_pack", "specialist"];
-export const SITE_ADDONS: readonly AddonName[] = ["extra5", "rush"]; // "secondPage" is not sold (lead decision)
+/** Tiers a ?tier= link may preselect. Specialist is retired (no new quotes), so it is not here. */
+export const CTA_TIERS: readonly CtaTier[] = ["spark", "proof", "retest"];
+/** Customer-facing tier names (never the internal keys or retired names). */
+export const TIER_LABELS = PUBLIC_TIER_LABELS;
 
-export const TIER_LABELS: Record<TierName, string> = {
-  spark: "Spark",
-  pulse: "Pulse",
-  proof: "Proof",
-  launch_pack: "Launch Pack",
-  specialist: "Specialist Jury",
-};
+/** Whole number in [0, MAX_EXTRA_JURORS]. */
+export function clampExtraJurors(n: unknown): number {
+  const v = Math.trunc(Number(n));
+  return Number.isFinite(v) ? Math.min(MAX_EXTRA_JURORS, Math.max(0, v)) : 0;
+}
+
+export function allowsExtraJurors(tier: CtaTier): boolean {
+  return (EXTRA_JUROR_TIERS as readonly string[]).includes(tier);
+}
+
+/** The coupon when `code` matches it and it applies to `tier` (expiry is handled by the caller). */
+export function couponFor(tier: CtaTier, coupon: PublicCoupon | null, code: string | null): PublicCoupon | null {
+  return coupon && tier === coupon.tier && sameCode(code, coupon.code) ? coupon : null;
+}
 
 export function isCtaTier(v: unknown): v is CtaTier {
   return typeof v === "string" && (CTA_TIERS as readonly string[]).includes(v);
@@ -289,7 +307,9 @@ export function decideTierAction(i: {
 
 export type CheckoutBody = {
   tier: BuyableTier;
-  addons: AddonName[];
+  addons: [];
+  extra_jurors?: number;
+  coupon?: string;
   email: string;
   buyer_desc: string;
   url?: string;
@@ -302,17 +322,21 @@ export type CheckoutBody = {
 
 export function buildCheckoutBody(i: {
   tier: BuyableTier;
-  addons: AddonName[];
+  extraJurors?: number;
+  /** Discount code to apply (only when the coupon applies to this tier). */
+  coupon?: string | null;
   input: CheckoutInput;
   previewId?: string | null;
   parentOrderId?: string | null;
   code?: string | null;
   src?: string | null;
 }): CheckoutBody {
-  const addons = [...new Set(i.addons.filter((a) => (SITE_ADDONS as readonly string[]).includes(a)))];
+  const extra = allowsExtraJurors(i.tier) ? clampExtraJurors(i.extraJurors ?? 0) : 0;
   return {
     tier: i.tier,
-    addons,
+    addons: [],
+    ...(extra > 0 ? { extra_jurors: extra } : {}),
+    ...(i.coupon ? { coupon: i.coupon } : {}),
     email: i.input.email,
     buyer_desc: i.input.buyer_desc,
     ...(i.input.url ? { url: i.input.url } : { pitch_text: i.input.pitch_text }),
@@ -350,6 +374,25 @@ export function checkoutOutcome(status: number, body: unknown): CheckoutOutcome 
         kind: "bad_parent",
         message: "That upgrade link doesn't match this email. Use the email from your original order, or continue without the upgrade credit.",
       };
+    case "coupon_unknown":
+    case "coupon_expired":
+    case "coupon_not_applicable":
+    case "coupon_already_used":
+    case "extra_jurors_out_of_range":
+    case "margin_too_low":
+    case "retest_needs_parent":
+    case "retest_parent_not_eligible":
+    case "retest_window_expired":
+    case "retest_already_used":
+    case "tier_not_offered":
+    case "addons_not_offered":
+      return {
+        kind: "error",
+        message:
+          typeof b.error === "string" && b.error
+            ? `${String(b.error).slice(0, 240)} Nothing was charged.`
+            : "That package isn't available for this order. Nothing was charged.",
+      };
     case "checkout_unavailable":
       return { kind: "error", message: "Our payment provider didn't respond. Nothing was charged. Try again in a moment." };
     case "bad_request":
@@ -364,21 +407,10 @@ export function checkoutOutcome(status: number, body: unknown): CheckoutOutcome 
 // ---------------------------------------------------------------- prices
 
 export type PriceMap = Partial<Record<TierName, number | null>>;
-export type OfferLike = { tier: TierName; priceUsd: number; normalUsd: number; endsAt: string } | null | undefined;
 
-/** The launch offer only while its end time is in the future (static shells can be minutes stale). */
-export function liveOffer(offer: OfferLike, nowMs: number): Exclude<OfferLike, undefined> {
-  if (!offer) return null;
-  const ends = Date.parse(offer.endsAt);
-  return Number.isFinite(ends) && nowMs < ends ? offer : null;
-}
-
-/** Display price for a tier: the live offer price, else the server price, else the constant. */
-export function displayPrice(tier: TierName, prices: PriceMap | undefined, offer: OfferLike, nowMs: number): { price: number | null; compareAt: number | null } {
-  const base = prices?.[tier] ?? TIERS[tier].price;
-  const o = liveOffer(offer, nowMs);
-  if (o && o.tier === tier) return { price: o.priceUsd, compareAt: o.normalUsd };
-  return { price: base, compareAt: null };
+/** Display price for a tier: the server price, else the constant. */
+export function displayPrice(tier: TierName, prices: PriceMap | undefined): number | null {
+  return prices?.[tier] ?? TIERS[tier].price;
 }
 
 /** "/?tier=proof#preview" — where a TierCta sends people on pages without a preview form. */

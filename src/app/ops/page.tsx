@@ -8,6 +8,7 @@ import { AutoRefresh, KillSwitch } from "@/components/ops/OpsControls";
 import { getOpsData, type OpsData } from "@/lib/queries";
 import { Actor } from "@/lib/types";
 import { LOW_TERAC_BALANCE_USD } from "@/lib/constants";
+import { orderRefOrNull } from "@/lib/order-ref";
 import {
   ageText,
   funnelBySrc,
@@ -174,6 +175,7 @@ async function Dashboard({ searchParams }: Props) {
             <table className="data">
               <thead>
                 <tr>
+                  <th>Ref</th>
                   <th>Created</th>
                   <th>Tier</th>
                   <th>Stage</th>
@@ -188,6 +190,9 @@ async function Dashboard({ searchParams }: Props) {
               <tbody>
                 {d.orders.map((o) => (
                   <tr key={o.id}>
+                    <td className="small">
+                      <code>{orderRefOrNull(o.id) ?? "–"}</code>
+                    </td>
                     <td className="small">{ageText(o.created_at, now)} ago</td>
                     <td>{o.tier}</td>
                     <td>

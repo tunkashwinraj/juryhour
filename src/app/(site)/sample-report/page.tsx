@@ -14,7 +14,7 @@ import { CopyCard, PageHero, kit } from "../for/_kit";
 export const metadata = pageMetadata({
   title: "Sample report: what a JuryHour verdict looks like",
   description:
-    "A complete example Proof report: verdict, scorecard, top fixes with juror quotes, winning copy and every anonymous response. Illustrative data.",
+    "A complete example Verdict report: verdict, scorecard, top fixes with juror quotes, winning copy and every anonymous response. Illustrative data.",
   path: "/sample-report",
   ogTitle: "Sample verdict: B wins 12 of 15",
 });
@@ -27,7 +27,7 @@ export default function SampleReportPage() {
         crumbs={[{ name: "Sample report", path: "/sample-report" }]}
         eyebrow="SAMPLE REPORT"
         title="What does a JuryHour report look like?"
-        lede={`This is a complete Proof report: ${TIERS.proof.jurors} people judged a page against our rewrite. It uses the same sections and layout as a real report; only the share and next-step buttons are left out.`}
+        lede={`This is a complete Verdict report: ${TIERS.proof.jurors} people judged a page against our rewrite. It uses the same sections and layout as a real report; only the share and next-step buttons are left out.`}
       >
         <Button href="/#preview" variant="primary">
           Get a free preview of your page
@@ -65,7 +65,7 @@ export default function SampleReportPage() {
           data={SAMPLE_REPORT_DATA}
           appUrl=""
           nowMs={0}
-          prices={{ proof: TIERS.proof.price, pulse: TIERS.pulse.price }}
+          prices={{ proof: TIERS.proof.price, retest: TIERS.retest.price }}
           sample
         />
       </Section>

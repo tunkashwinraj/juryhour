@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { connection } from "next/server";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 import { OrderStatusLive } from "@/components/order/OrderStatusLive";
-import { getOrderStatus } from "@/lib/queries";
+import { getOrderRefByToken, getOrderStatus } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "Your order",
@@ -36,8 +36,9 @@ async function OrderLoader({ params, searchParams }: Props) {
   await connection();
   const [{ token }, sp] = await Promise.all([params, searchParams]);
   let order = null;
+  let ref: string | null = null;
   try {
-    order = await getOrderStatus(token);
+    [order, ref] = await Promise.all([getOrderStatus(token), getOrderRefByToken(token).catch(() => null)]);
   } catch (e) {
     console.error("[/o] lookup failed", (e as Error).message);
     return (
@@ -58,5 +59,5 @@ async function OrderLoader({ params, searchParams }: Props) {
       </>
     );
   }
-  return <OrderStatusLive initial={order} paidParam={sp.paid === "1"} />;
+  return <OrderStatusLive initial={order} paidParam={sp.paid === "1"} orderRef={ref} />;
 }

@@ -31,12 +31,11 @@ import {
   winningCopyText,
 } from "./home-content";
 import type { TierName } from "@/lib/constants";
-import type { LaunchOffer } from "@/lib/launch";
 import s from "./marketing.module.css";
 
-type PreviewData = { prices: Partial<Record<TierName, number | null>>; offer: LaunchOffer | null };
+type PreviewData = { prices: Partial<Record<TierName, number | null>> };
 
-export function Hero({ prices, offer }: PreviewData) {
+export function Hero({ prices }: PreviewData) {
   return (
     <section aria-labelledby="hero-h">
       <Container className={s.hero}>
@@ -50,7 +49,7 @@ export function Hero({ prices, offer }: PreviewData) {
             buyer, and has them judge yours against ours. You get the winner and the copy to paste.
           </p>
           {/* HeroPreview renders the "Free AI preview in about 10 seconds. No card, no login." microcopy. */}
-          <HeroPreview id="preview" prices={prices} offer={offer} />
+          <HeroPreview id="preview" prices={prices} />
         </div>
         <HeroArtifact />
       </Container>
@@ -119,7 +118,7 @@ export function WhatYouGet() {
       id="what-you-get"
       eyebrow="What you get"
       title="A verdict you can act on tonight."
-      lede="An excerpt from a Proof report. The case below is an example with illustrative numbers."
+      lede="An excerpt from a Verdict report. The case below is an example with illustrative numbers."
     >
       <article className={s.excerpt} aria-label="Example report excerpt">
         <div className={s.excerptTop}>
@@ -235,14 +234,14 @@ export function HomeFaq() {
   );
 }
 
-export function FinalCta({ prices, offer }: PreviewData) {
+export function FinalCta({ prices }: PreviewData) {
   return (
     <section className={s.band} aria-labelledby="final-cta-h">
       <Container className={s.bandInner}>
         <h2 id="final-cta-h" className={s.bandTitle}>
           Your page has 5 seconds. Find out what happens in them.
         </h2>
-        <HeroPreview id="preview-band" variant="band" prices={prices} offer={offer} />
+        <HeroPreview id="preview-band" variant="band" prices={prices} />
       </Container>
     </section>
   );

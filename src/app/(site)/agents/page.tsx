@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Badge, Section } from "@/components/ui";
-import { BUYABLE_TIERS, PREVIEW_LIMIT_PER_EMAIL_PER_DAY, PREVIEW_LIMIT_PER_IP_PER_DAY } from "@/lib/constants";
+import {
+  BUYABLE_TIERS,
+  PREVIEW_LIMIT_PER_EMAIL_PER_DAY,
+  PREVIEW_LIMIT_PER_IP_PER_DAY,
+  RETEST_WINDOW_DAYS,
+  TIER_LABELS,
+} from "@/lib/constants";
 import { pageMetadata, siteUrl } from "@/lib/seo";
 import { faqByIds } from "../../../../content/faq";
 import { FaqBlock, PageHero, kit } from "../for/_kit";
@@ -15,7 +21,6 @@ export const metadata = pageMetadata({
 
 const TOOLS: { name: string; does: string }[] = [
   { name: "juryhour_preview", does: "Free AI preview of a URL or pitch: headline read, weakest line, rewrite, suggested jury. Includes the safety screen." },
-  { name: "juryhour_quote", does: "Request a Specialist Jury quote for a narrow professional audience." },
   { name: "juryhour_create_test", does: "Create an order for a tier and return a Whop checkout URL for a human to pay." },
   { name: "juryhour_get_verdict", does: "Read order status and, once delivered, the verdict report." },
 ];
@@ -37,7 +42,6 @@ const checkoutExample = (base: string) => `curl -X POST ${base}/api/checkout \\
   -H "Content-Type: application/json" \\
   -d '{
     "tier": "proof",
-    "addons": [],
     "email": "you@example.com",
     "buyer_desc": "Freelance designers who bill by project",
     "url": "https://example.com",
@@ -131,29 +135,28 @@ export default function AgentsPage() {
                   <code>POST /api/checkout</code>
                 </th>
                 <td>
-                  <code>{`{tier, addons[], email, buyer_desc, url | pitch_text, preview_id?, code?, src?}`}</code> →{" "}
+                  <code>{`{tier, email, buyer_desc, url | pitch_text, extra_jurors?, coupon?, preview_id?, parent_order_id?, code?, src?}`}</code> →{" "}
                   <code>{`{ok, purchase_url, token}`}</code>
                 </td>
                 <td>
                   <code>tier</code> is one of {BUYABLE_TIERS.map((t, i) => (
                     <span key={t}>
                       {i > 0 ? ", " : ""}
-                      <code>{t}</code>
+                      <code>{t}</code> ({TIER_LABELS[t]})
                     </span>
                   ))}
-                  ; add-ons <code>extra5</code>, <code>rush</code>. A human pays at <code>purchase_url</code> (Whop).
+                  . <code>extra_jurors</code> is 0–15 at $7 each (400 <code>extra_jurors_out_of_range</code>); legacy{" "}
+                  <code>addons</code> are refused (400 <code>addons_not_offered</code>); other tiers get 400{" "}
+                  <code>tier_not_offered</code>. <code>coupon</code> applies a discount code to the Verdict (400{" "}
+                  <code>coupon_unknown</code>, <code>coupon_expired</code>, <code>coupon_not_applicable</code>); a
+                  combination that can&apos;t keep our 30% margin gets 400 <code>margin_too_low</code>. <code>retest</code> needs <code>parent_order_id</code> of a delivered{" "}
+                  <code>proof</code> order with the same email, within {RETEST_WINDOW_DAYS} days, once (400{" "}
+                  <code>retest_needs_parent</code>, <code>retest_parent_not_eligible</code>,{" "}
+                  <code>retest_window_expired</code>, <code>retest_already_used</code>). A human pays at{" "}
+                  <code>purchase_url</code> (Whop).
                   503 <code>sales_paused</code> when we&apos;re at capacity; 403 <code>content_refused</code> if the preview
                   was refused.
                 </td>
-              </tr>
-              <tr>
-                <th scope="row">
-                  <code>POST /api/quote</code>
-                </th>
-                <td>
-                  <code>{`{email, buyer_desc, url | pitch_text, preview_id?, src?}`}</code> → <code>{`{ok, token}`}</code>
-                </td>
-                <td>Specialist Jury quote request. We email a checkout link once it&apos;s priced; quotes expire after 48 hours.</td>
               </tr>
               <tr>
                 <th scope="row">

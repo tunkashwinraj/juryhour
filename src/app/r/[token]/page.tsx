@@ -6,6 +6,7 @@ import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 import { ReportView } from "@/components/report/ReportView";
 import { getCurrentPrices, getReportData } from "@/lib/queries";
 import { TIERS } from "@/lib/constants";
+import { activeCoupon } from "@/lib/coupons";
 import { nowMs } from "@/components/rules";
 
 export const metadata: Metadata = {
@@ -72,7 +73,8 @@ async function ReportLoader({ params }: Props) {
       data={{ ...data, report: data.report }}
       appUrl={appUrl}
       nowMs={nowMs()}
-      prices={{ proof: prices?.proof ?? TIERS.proof.price, pulse: prices?.pulse ?? TIERS.pulse.price }}
+      prices={{ proof: prices?.proof ?? TIERS.proof.price, retest: prices?.retest ?? TIERS.retest.price }}
+      coupon={activeCoupon()}
     />
   );
 }

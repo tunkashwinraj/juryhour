@@ -2,9 +2,9 @@
 // pricing shells stay static: every function here is "use cache" with cacheLife("minutes").
 import { cacheLife, cacheTag } from "next/cache";
 import { db } from "@/lib/db";
-import { activeLaunchOffer, type LaunchOffer } from "@/lib/launch";
+import { activeCoupon, type PublicCoupon } from "@/lib/coupons";
 import { getShellPrices } from "@/lib/queries";
-import type { TierName } from "@/lib/constants";
+import { BUYABLE_TIERS, type TierName } from "@/lib/constants";
 
 export type LiveCounters = {
   verdictsDelivered: number;
@@ -74,30 +74,32 @@ export async function getLiveCounters(): Promise<LiveCounters> {
 }
 
 export type PricingSnapshot = {
-  prices: Record<TierName, number | null>;
-  offer: LaunchOffer | null;
+  /** Prices of the tiers sold at checkout only (retired tiers never reach the page). */
+  prices: Partial<Record<TierName, number | null>>;
+  /** The Verdict coupon while it runs (evaluated inside the cache; the UI also hides it at endsAt). */
+  coupon: PublicCoupon | null;
   /** When the snapshot was taken (ISO). Use it instead of the clock in server components. */
   asOf: string;
 };
 
 /**
- * Prices + the launch offer as of the (cached) render. The offer is evaluated against the clock
- * inside the cache, so the shell can be a few minutes stale: the UI hides the offer client-side
- * once `endsAt` passes, and /api/checkout always charges by the real time.
+ * Prices + the Verdict coupon as of the (cached) render: the prices table, constants as fallback.
+ * /api/checkout reads the same table and validates the coupon by the real time.
  */
 export async function getPricingSnapshot(): Promise<PricingSnapshot> {
   "use cache";
   cacheLife("minutes");
   cacheTag("prices");
-  const prices = await getShellPrices();
+  const all = await getShellPrices();
+  const prices = Object.fromEntries(BUYABLE_TIERS.map((t) => [t, all[t]])) as Partial<Record<TierName, number | null>>;
   const now = new Date();
-  let offer: LaunchOffer | null = null;
+  let coupon: PublicCoupon | null = null;
   try {
-    offer = activeLaunchOffer(now, prices);
+    coupon = activeCoupon(now);
   } catch (e) {
-    console.error("[marketing] launch offer unavailable", (e as Error).message);
+    console.error("[marketing] coupon unavailable", (e as Error).message);
   }
-  return { prices, offer, asOf: now.toISOString() };
+  return { prices, coupon, asOf: now.toISOString() };
 }
 
 /** Sales-paused flag for the capacity notice. Cached; false on error (checkout still enforces it). */

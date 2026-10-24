@@ -69,7 +69,7 @@ export default function ComparePage() {
             {
               label: "Tests old vs new",
               cells: [
-                "Yes, in Proof: your page vs our rewrite, random order, blind",
+                "Yes, in Verdict: your page vs our rewrite, random order, blind",
                 cite(WYNTER.tests),
                 cite(PICKFU.tests),
                 cite(USERTESTING.tests),
@@ -80,7 +80,7 @@ export default function ComparePage() {
               label: "Price",
               cells: [
                 <>
-                  Fixed per test: Spark ${TIERS.spark.price}, Proof ${P.price} list (<Link href="/pricing">today&apos;s prices</Link>)
+                  Fixed per test: Quick Read ${TIERS.spark.price}, Verdict ${P.price} (<Link href="/pricing">today&apos;s prices</Link>)
                 </>,
                 cite(WYNTER.price),
                 cite(PICKFU.price),
@@ -91,7 +91,7 @@ export default function ComparePage() {
             {
               label: "Turnaround",
               cells: [
-                `Same day (jury deadline ${P.deadlineHours} h for Proof); Specialist 24–72 h`,
+                `Same day (jury deadline ${P.deadlineHours} h for Verdict)`,
                 cite(WYNTER.speed),
                 cite(PICKFU.speed),
                 cite(USERTESTING.speed),

@@ -20,7 +20,7 @@ async function main() {
     if (o.stage !== "FAILED") await transition(id, "FAILED", why, {}, { actor: "code" });
     let refunded = 0;
     let note = `${why} (synthetic order: no real payment to refund)`;
-    if (o.src === "smoke-test" && o.whop_payment_id) {
+    if (o.whop_payment_id && !o.whop_payment_id.startsWith("chaos")) {
       try {
         await refundPayment({ paymentId: o.whop_payment_id, mode: "sandbox" });
         refunded = Number(o.price_usd ?? 0);

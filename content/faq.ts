@@ -2,7 +2,7 @@
 // Rules: answer in the first sentence, no invented numbers, no promised discounts, prices live on
 // /pricing (they can move, so FAQ text doesn't quote them). `aText` is the plain-text answer used
 // for FAQPage JSON-LD; here `a` is plain text too, so they are the same string.
-import { TIERS } from "@/lib/constants";
+import { EXTRA_JUROR_USD, MAX_EXTRA_JURORS, TIERS, UPGRADE_CREDIT_HOURS } from "@/lib/constants";
 
 export type FaqItem = { id: string; q: string; a: string; aText: string };
 export type FaqGroup = { id: string; title: string; items: FaqItem[] };
@@ -11,8 +11,6 @@ const item = (id: string, q: string, a: string): FaqItem => ({ id, q, a, aText: 
 
 const P = TIERS.proof;
 const S = TIERS.spark;
-const U = TIERS.pulse;
-const X = TIERS.specialist;
 
 export const FAQ_GROUPS: FaqGroup[] = [
   {
@@ -32,12 +30,12 @@ export const FAQ_GROUPS: FaqGroup[] = [
       item(
         "what-tested",
         "What exactly do jurors see?",
-        `Jurors see a short text card with your headline, subheadline, three key points and call to action, for 5 seconds. In Proof they see your card and our challenger, in random order, without knowing which is yours. They don't browse your site.`,
+        `Jurors see a short text card with your headline, subheadline, three key points and call to action, for 5 seconds. In a Verdict they see your card and our challenger, in random order, without knowing which is yours. They don't browse your site.`,
       ),
       item(
         "enough",
         `Is ${P.jurors} people enough?`,
-        `${P.jurors} people is a directional signal, not a scientific study. It reliably catches the big problems (people can't say what you do, or who it's for) and shows which of two versions lands better. It won't measure a 2% conversion lift. For narrow professional buyers, use the Specialist Jury.`,
+        `${P.jurors} people is a directional signal, not a scientific study. It reliably catches the big problems (people can't say what you do, or who it's for) and shows which of two versions lands better. It won't measure a 2% conversion lift.`,
       ),
       item(
         "edit-site",
@@ -47,7 +45,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       item(
         "how-fast",
         "How fast do I get my verdict?",
-        `Same day for Spark, Pulse and Proof. The jury deadline is ${S.deadlineHours} hours after payment for Spark and Pulse and ${P.deadlineHours} hours for Proof, halved with the Rush add-on. Specialist Jury takes 24 to 72 hours. You can watch progress on your order page.`,
+        `Same day for Quick Read and Verdict. The jury deadline is ${S.deadlineHours} hours after payment for Quick Read and ${P.deadlineHours} hours for Verdict. You can watch progress on your order page.`,
       ),
       item(
         "guarantee",
@@ -120,17 +118,17 @@ export const FAQ_GROUPS: FaqGroup[] = [
       item(
         "tiers",
         "Which package should I buy?",
-        `Spark (${S.jurors} people) is a quick first impression of your headline. Pulse (${U.jurors} people) is a full reaction to your current page. Proof (${P.jurors} people) tests your page against our rewrite and tells you which wins; it's the one we recommend. Launch Pack adds a free retest after you update. Specialist Jury (${X.jurors} verified professionals) is for narrow B2B buyers. Current prices are on /pricing.`,
+        `Quick Read (${S.jurors} people) is a quick first impression of your headline. Verdict (${P.jurors} people) tests your page against our rewrite and tells you which wins; it's the one we recommend. You can add up to ${MAX_EXTRA_JURORS} extra jurors at $${EXTRA_JUROR_USD} each to a Quick Read or Verdict. Current prices are on /pricing.`,
       ),
       item(
         "upgrade",
-        "Does my Spark count toward Proof?",
-        "Yes. If you upgrade to Proof within 24 hours, what you paid for Spark is credited.",
+        "Does my Quick Read count toward a Verdict?",
+        `Yes. If you upgrade to a Verdict within ${UPGRADE_CREDIT_HOURS} hours, what you paid for the Quick Read is credited. Use the upgrade link in your Quick Read report.`,
       ),
       item(
         "codes",
         "Do promo codes give a discount?",
-        "No. Partner codes like the ones in our links only tell us who sent you. The checkout has a code field so you can enter one; it doesn't change the price.",
+        "Partner codes like the ones in our links only tell us who sent you and don't change the price. The one discount code is the Verdict launch code shown on /pricing while it runs; it applies to the Verdict price only and doesn't combine with other discounts.",
       ),
       item(
         "refunds",
@@ -161,7 +159,7 @@ export const FAQ_GROUPS: FaqGroup[] = [
       item(
         "bundle",
         "Is there an agency bundle?",
-        "We're setting up an agency bundle of 5 Proofs. There's no published price yet; ask us and we'll quote it.",
+        "We're setting up an agency bundle of 5 Verdicts. There's no published price yet; ask us and we'll quote it.",
       ),
       item(
         "client-pages",

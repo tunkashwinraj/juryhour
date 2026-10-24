@@ -4,6 +4,8 @@ Read with `docs/WEBSITE_SPEC.md` (the brief) and `docs/CONTRACTS.md` (backend co
 
 ## 0. Lead decisions (facts the site must reflect)
 
+> **Superseded by pricing v3 (2026-10, founder):** two public plans — Quick Read (`spark`) $11 and Verdict (`proof`) "$299 launch offer · regular $499 from Dec 1" (20 jurors) — plus extra jurors ($7 each, 0–20) and the HALF coupon (50% off the first Verdict per email, until `COUPON_HALF_ENDS_AT`, default 2026-12-01T05:00Z; combines with the $11 Quick Read credit). Retest (`retest`, $59) is sold only from a delivered Verdict report. Pulse, Launch Pack, Specialist, +5 jurors, Rush, packs and the launch-offer bar/TODAY99 are gone. Items 1 and 3 below are historical. Code: `src/lib/constants.ts`, `src/lib/pricing.ts`, `src/lib/coupons.ts`, `/api/checkout`.
+
 1. **Launch offer is real and server-enforced.** `src/lib/launch.ts` → `activeLaunchOffer(now?, normalPrices?)` returns `{tier:'proof', priceUsd:99, normalUsd:149, endsAt, code:'TODAY99'}` or `null`. Env: `LAUNCH_OFFER_ENDS_AT` (set to 2026-10-24T22:00:00Z = 6:00pm ET), `LAUNCH_OFFER_PRICE`, `LAUNCH_OFFER_TIER`, `LAUNCH_OFFER_CODE`. `/api/checkout` applies it automatically by time (code not required). UI must also hide/strike the offer client-side once `endsAt` passes (the static shell can be up to a few minutes stale), and show "normally $149" next to $99.
 2. **Promo codes are attribution only.** `/api/checkout` now accepts optional `code` (`[A-Za-z0-9_-]{1,40}`), stored as `orders.promo_code`. No code gives a discount (LOVABLE, WHOP, TODAY99 included). Never promise a code discount in copy.
 3. **The "second page" add-on is NOT sold** (nothing fulfills it yet). Add-ons on the site: **+5 jurors $15** and **Rush $9** only. Don't render "second page".

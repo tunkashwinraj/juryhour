@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { BANNED_CATEGORIES } from "@/lib/constants";
+import { BANNED_CATEGORIES, RETEST_WINDOW_DAYS } from "@/lib/constants";
 import { pageMetadata, supportEmail } from "@/lib/seo";
 import { LegalPage, type LegalSection } from "../_ui/LegalPage";
 import { GOVERNING_LAW } from "../_ui/legal";
@@ -52,8 +52,13 @@ function sections(): LegalSection[] {
             quotes and the numbers behind the verdict.
           </p>
           <p>
-            JuryHour is operated by AI agents within limits enforced by code. Packages, prices and add-ons are as shown at
-            checkout and can change; the price you see at checkout is the price you pay.
+            JuryHour is operated by AI agents within limits enforced by code. Packages and prices are as shown at checkout
+            and can change; the price you see at checkout is the price you pay.
+          </p>
+          <p>
+            A Retest is sold only as a follow-up to a delivered Verdict: it must be bought with the same email as that
+            Verdict, within {RETEST_WINDOW_DAYS} days of its delivery, and each Verdict can be retested once. A Retest is its
+            own order with its own jury.
           </p>
         </>
       ),
@@ -146,8 +151,10 @@ function sections(): LegalSection[] {
       title: "Payment and refunds",
       body: (
         <p>
-          Payments are processed by Whop and are subject to Whop&apos;s terms. Promo codes record where you heard about us;
-          they don&apos;t change the price unless the checkout shows a different price. Refunds follow our{" "}
+          Payments are processed by Whop and are subject to Whop&apos;s terms. Partner and referral codes record where you
+          heard about us and don&apos;t change the price. A discount code changes the price only as stated with it (for
+          example, HALF applies to a customer&apos;s first Verdict until its end date) and as shown at checkout. Extra jurors
+          are never discounted. Refunds follow our{" "}
           <a href="/legal/refunds">refund policy</a>, which is enforced in code.
         </p>
       ),
@@ -188,7 +195,7 @@ function sections(): LegalSection[] {
       title: "Governing law",
       body: (
         <p>
-          These terms are governed by the laws of <span className={s.mono}>{GOVERNING_LAW}</span>, without regard to its
+          These terms are governed by the laws of the State of {GOVERNING_LAW}, United States, without regard to its
           conflict-of-law rules. If you&apos;re a consumer, you keep any rights the law of your home country gives you.
         </p>
       ),

@@ -34,9 +34,11 @@ function refusalCode(fn: () => unknown): string | null {
 }
 
 describe("panel spec + panel-size rule n = min(jurors, floor(cap/cpi))", () => {
-  it("tiers, extra5 and rush", () => {
-    expect(panelSpec({ tier: "proof", addons: [], price_usd: 149 })).toMatchObject({ maxJurors: 15, minJurors: 10, costCap: 60, deadlineHours: 8 });
-    expect(panelSpec({ tier: "proof", addons: ["extra5"], price_usd: 164 })).toMatchObject({ maxJurors: 20, costCap: 80 });
+  it("tiers, paid extra jurors, and legacy extra5 / rush", () => {
+    expect(panelSpec({ tier: "proof", addons: [], price_usd: 299 })).toMatchObject({ maxJurors: 20, minJurors: 14, costCap: 80, deadlineHours: 8 });
+    expect(panelSpec({ tier: "proof", addons: [], price_usd: 334, extra_jurors: 5 })).toMatchObject({ maxJurors: 25, minJurors: 14, costCap: 100 });
+    expect(panelSpec({ tier: "launch_pack", addons: ["extra5"], price_usd: 214 })).toMatchObject({ maxJurors: 20, costCap: 80 });
+    expect(panelSpec({ tier: "retest", addons: [], price_usd: 59 })).toMatchObject({ format: "proof", maxJurors: 8, minJurors: 6, costCap: 32 });
     expect(panelSpec({ tier: "pulse", addons: ["rush"], price_usd: 58 }).deadlineHours).toBe(2);
     // specialist cap keeps the 30% margin at the quoted price
     const s = panelSpec({ tier: "specialist", addons: [], price_usd: 499 });
@@ -60,15 +62,20 @@ describe("panel spec + panel-size rule n = min(jurors, floor(cap/cpi))", () => {
 });
 
 describe("checkLaunch refusals", () => {
-  const spec = panelSpec({ tier: "proof", addons: [], price_usd: 149 });
-  it("ok at the default size", () => expect(checkLaunch({ price: 149, cpi: 4, spec })).toEqual({ n: 15, budget: 60 }));
-  it("quote_not_ready", () => expect(refusalCode(() => checkLaunch({ price: 149, cpi: null, spec }))).toBe("quote_not_ready"));
-  it("infeasible_cost (3× cap)", () => expect(refusalCode(() => checkLaunch({ price: 149, cpi: 12, spec }))).toBe("infeasible_cost"));
-  it("n_out_of_range below min", () => expect(refusalCode(() => checkLaunch({ price: 149, cpi: 4, n: 9, spec }))).toBe("n_out_of_range"));
-  it("n_out_of_range above max", () => expect(refusalCode(() => checkLaunch({ price: 149, cpi: 4, n: 16, spec }))).toBe("n_out_of_range"));
-  it("n_out_of_range non-integer", () => expect(refusalCode(() => checkLaunch({ price: 149, cpi: 4, n: 10.5, spec }))).toBe("n_out_of_range"));
-  it("over_cost_cap", () => expect(refusalCode(() => checkLaunch({ price: 149, cpi: 5, n: 13, spec }))).toBe("over_cost_cap"));
-  it("shrinking within the cap is allowed", () => expect(checkLaunch({ price: 149, cpi: 5, n: 12, spec })).toEqual({ n: 12, budget: 60 }));
+  // Verdict: 20 jurors (min 14), cap $80, $299.
+  const spec = panelSpec({ tier: "proof", addons: [], price_usd: 299 });
+  it("ok at the default size", () => expect(checkLaunch({ price: 299, cpi: 4, spec })).toEqual({ n: 20, budget: 80 }));
+  it("quote_not_ready", () => expect(refusalCode(() => checkLaunch({ price: 299, cpi: null, spec }))).toBe("quote_not_ready"));
+  it("infeasible_cost (3× cap)", () => expect(refusalCode(() => checkLaunch({ price: 299, cpi: 12, spec }))).toBe("infeasible_cost"));
+  it("n_out_of_range below min", () => expect(refusalCode(() => checkLaunch({ price: 299, cpi: 4, n: 13, spec }))).toBe("n_out_of_range"));
+  it("n_out_of_range above max", () => expect(refusalCode(() => checkLaunch({ price: 299, cpi: 4, n: 21, spec }))).toBe("n_out_of_range"));
+  it("n_out_of_range non-integer", () => expect(refusalCode(() => checkLaunch({ price: 299, cpi: 4, n: 14.5, spec }))).toBe("n_out_of_range"));
+  it("over_cost_cap", () => expect(refusalCode(() => checkLaunch({ price: 299, cpi: 5, n: 17, spec }))).toBe("over_cost_cap"));
+  it("shrinking within the cap is allowed", () => expect(checkLaunch({ price: 299, cpi: 5, n: 16, spec })).toEqual({ n: 16, budget: 80 }));
+  it("HALF + credit at full cap with 20 extra jurors still launches", () => {
+    const big = panelSpec({ tier: "proof", addons: [], price_usd: 278, extra_jurors: 20 });
+    expect(checkLaunch({ price: 278, cpi: 4, spec: big })).toEqual({ n: 40, budget: 160 });
+  });
   it("margin_too_low (discounted upgrade price)", () =>
     expect(refusalCode(() => checkLaunch({ price: 80, cpi: 4, spec }))).toBe("margin_too_low"));
   it("budget_below_minimum ($5 Terac minimum)", () => {
@@ -106,26 +113,41 @@ describe("refund math and policy", () => {
 
 describe("change_price checks", () => {
   const now = new Date("2026-10-24T12:00:00Z");
-  const row = { base_usd: 49, current_usd: 49, min_usd: 36.75, max_usd: 61.25, last_changed_at: null as string | null };
-  it("ok within band", () => expect(checkPriceChange({ tier: "pulse", price: 44, row, now })).toBe(44));
+  // Verdict (proof): base $199, band ±25% = $149.25–$248.75, cost floor ≈ $89.60.
+  const row = { base_usd: 199, current_usd: 199, min_usd: 149.25, max_usd: 248.75, last_changed_at: null as string | null };
+  it("ok within band", () => expect(checkPriceChange({ tier: "proof", price: 189, row, now })).toBe(189));
   it("outside_price_band", () => {
-    expect(refusalCode(() => checkPriceChange({ tier: "pulse", price: 36, row, now }))).toBe("outside_price_band");
-    expect(refusalCode(() => checkPriceChange({ tier: "pulse", price: 62, row, now }))).toBe("outside_price_band");
+    expect(refusalCode(() => checkPriceChange({ tier: "proof", price: 149, row, now }))).toBe("outside_price_band");
+    expect(refusalCode(() => checkPriceChange({ tier: "proof", price: 249, row, now }))).toBe("outside_price_band");
   });
   it("below_cost_floor (jurorCostCap/0.7 + fees)", () => {
     expect(priceFloor("spark")).toBeGreaterThan(10.5);
     const spark = { base_usd: 11, current_usd: 11, min_usd: 8.25, max_usd: 13.75, last_changed_at: null };
     expect(refusalCode(() => checkPriceChange({ tier: "spark", price: 9, row: spark, now }))).toBe("below_cost_floor");
+    expect(priceFloor("proof")).toBe(119.32);
+    const lowProof = { ...row, base_usd: 149, min_usd: 111.75, max_usd: 186.25 };
+    expect(refusalCode(() => checkPriceChange({ tier: "proof", price: 115, row: lowProof, now }))).toBe("below_cost_floor");
+  });
+  it("retest: $59 base, floor $48 at its $32 cap", () => {
+    const retest = { base_usd: 59, current_usd: 59, min_usd: 44.25, max_usd: 73.75, last_changed_at: null };
+    expect(priceFloor("retest")).toBe(48);
+    expect(checkPriceChange({ tier: "retest", price: 55, row: retest, now })).toBe(55);
+    expect(refusalCode(() => checkPriceChange({ tier: "retest", price: 45, row: retest, now }))).toBe("below_cost_floor");
   });
   it("price_changed_recently (once per 24h per tier)", () => {
     const recent = { ...row, last_changed_at: new Date(now.getTime() - 23 * 3_600_000).toISOString() };
-    expect(refusalCode(() => checkPriceChange({ tier: "pulse", price: 44, row: recent, now }))).toBe("price_changed_recently");
+    expect(refusalCode(() => checkPriceChange({ tier: "proof", price: 189, row: recent, now }))).toBe("price_changed_recently");
     const old = { ...row, last_changed_at: new Date(now.getTime() - 25 * 3_600_000).toISOString() };
-    expect(checkPriceChange({ tier: "pulse", price: 44, row: old, now })).toBe(44);
+    expect(checkPriceChange({ tier: "proof", price: 189, row: old, now })).toBe(189);
   });
   it("unknown_tier / no_change", () => {
     expect(refusalCode(() => checkPriceChange({ tier: "specialist", price: 499, row, now }))).toBe("unknown_tier");
-    expect(refusalCode(() => checkPriceChange({ tier: "pulse", price: 49, row, now }))).toBe("no_change");
+    expect(refusalCode(() => checkPriceChange({ tier: "proof", price: 199, row, now }))).toBe("no_change");
+  });
+  it("retired tiers are not repriced (tier_not_offered)", () => {
+    const pulse = { base_usd: 49, current_usd: 49, min_usd: 36.75, max_usd: 61.25, last_changed_at: null };
+    expect(refusalCode(() => checkPriceChange({ tier: "pulse", price: 44, row: pulse, now }))).toBe("tier_not_offered");
+    expect(refusalCode(() => checkPriceChange({ tier: "launch_pack", price: 189, row: pulse, now }))).toBe("tier_not_offered");
   });
 });
 

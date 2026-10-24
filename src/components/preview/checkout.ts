@@ -1,6 +1,5 @@
 // What a TierCta click does, as a plain async function (unit-tested with a mocked fetch).
 // TierCta.tsx only renders the outcome.
-import type { AddonName } from "@/lib/constants";
 import type { Attribution, TrackEvent, TrackEvents } from "@/lib/attribution";
 import { postJson } from "./client-api";
 import {
@@ -18,7 +17,10 @@ export type TierClickContext = {
   checkoutInput: (Omit<CheckoutInput, "email"> & { email: string | null }) | null;
   /** id of a non-refused preview, if any */
   previewId: string | null;
-  addons: AddonName[];
+  /** Extra jurors (0–15) chosen in the checkout step. */
+  extraJurors: number;
+  /** Coupon code to apply to this tier (null when none applies). */
+  coupon: string | null;
   parentOrderId: string | null;
   /** code typed into "Have a code?"; falls back to the attributed ?code= */
   code: string | null;
@@ -60,7 +62,8 @@ export async function performTierClick(tier: CtaTier, c: TierClickContext, deps:
   const code = c.code ?? attr.code ?? null;
   const body = buildCheckoutBody({
     tier,
-    addons: c.addons,
+    extraJurors: c.extraJurors,
+    coupon: c.coupon,
     input: { ...input, email: input.email },
     previewId: c.previewId,
     parentOrderId: c.parentOrderId,

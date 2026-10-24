@@ -1,6 +1,8 @@
+// DORMANT (pricing simplification 2026-10): the launch offer is retired and nothing on the site or
+// in /api/checkout calls this module any more. Kept, with its tests, in case a time-boxed offer is
+// wanted again; wiring it back in means applying it in /api/checkout AND showing it in the UI.
 // Launch offer (docs/WEBSITE_SPEC.md §5.1): a temporary price for one tier until a fixed end time.
-// Configured by env; the end time is real and never resets. Checkout applies it server-side, so the
-// price a buyer is charged always matches the offer that was live when they clicked.
+// Configured by env; the end time is real and never resets.
 import { TIERS, type TierName } from "./constants";
 import { env } from "./env";
 

@@ -54,13 +54,13 @@ export const LOOKUPS_PER_EMAIL_PER_DAY = 3;
 export const LOOKUPS_PER_IP_PER_DAY = 10;
 export const LOOKUP_MESSAGE = "If we have orders for that email, we've sent the links.";
 
-type OrderRow = { token: string; tier: string; stage: string; created_at: string; paid_at: string | null };
+type OrderRow = { id: string; token: string; tier: string; stage: string; created_at: string; paid_at: string | null };
 
 /** Paid orders and specialist quote requests (abandoned checkouts are left out), newest first, max 10. */
 export async function sendOrderLinks(email: string, leadRef: string): Promise<"sent" | "none" | "skipped"> {
   const res = await db()
     .from("orders")
-    .select("token, tier, stage, created_at, paid_at")
+    .select("id, token, tier, stage, created_at, paid_at")
     .eq("email", email)
     .eq("mode", env().APP_MODE)
     .order("created_at", { ascending: false })
@@ -72,7 +72,7 @@ export async function sendOrderLinks(email: string, leadRef: string): Promise<"s
     template: "order_lookup",
     to: email,
     vars: {
-      orders: JSON.stringify(orders.map((o) => ({ token: o.token, tier: o.tier, stage: o.stage, created_at: o.created_at }))),
+      orders: JSON.stringify(orders.map((o) => ({ id: o.id, token: o.token, tier: o.tier, stage: o.stage, created_at: o.created_at }))),
     },
     idempotencyKey: `order_lookup:${leadRef}`,
   });

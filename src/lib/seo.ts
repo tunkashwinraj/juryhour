@@ -2,9 +2,8 @@
 // Canonical, OG and JSON-LD URLs always come from NEXT_PUBLIC_APP_URL — never hardcode the host.
 import type { Metadata } from "next";
 import { createElement, type ReactElement } from "react";
-import { TIERS, type TierName } from "./constants";
+import { PUBLIC_TIER_LABELS, TIERS, type TierName } from "./constants";
 import { env } from "./env";
-import type { LaunchOffer } from "./launch";
 
 export const SITE_NAME = "JuryHour";
 export const TITLE_SUFFIX = " · JuryHour";
@@ -215,40 +214,22 @@ export function websiteLd(): LdObject {
   };
 }
 
-const TIER_LABEL: Record<TierName, string> = {
-  spark: "Spark",
-  pulse: "Pulse",
-  proof: "Proof",
-  launch_pack: "Launch Pack",
-  specialist: "Specialist",
-};
+/** Fixed-price tiers listed as JSON-LD offers. Retest is sold only from a Verdict report, never here. */
+const LD_TIERS = ["spark", "proof"] as const satisfies readonly TierName[];
 
 /**
- * Product with one Offer per priced tier (USD, InStock). Specialist (quote-only) is omitted.
- * An active launch offer is added as its own priced Offer with priceValidUntil = its end time.
+ * Product with one Offer per public plan (USD, InStock): Quick Read and Verdict (launch-offer price).
  */
-export function productOffersLd(prices: Partial<Record<TierName, number | null>>, offer: LaunchOffer | null): LdObject {
+export function productOffersLd(prices: Partial<Record<TierName, number | null>>): LdObject {
   const offers: LdObject[] = [];
-  for (const tier of Object.keys(TIERS) as TierName[]) {
+  for (const tier of LD_TIERS) {
     const price = prices[tier] ?? TIERS[tier].price;
-    if (price === null || price === undefined) continue;
     offers.push({
       "@type": "Offer",
-      name: `${TIER_LABEL[tier]} (${TIERS[tier].jurors} jurors)`,
+      name: `${PUBLIC_TIER_LABELS[tier]} (${TIERS[tier].jurors} jurors)`,
       price: price.toFixed(2),
       priceCurrency: "USD",
       availability: "https://schema.org/InStock",
-      url: absoluteUrl("/pricing"),
-    });
-  }
-  if (offer) {
-    offers.push({
-      "@type": "Offer",
-      name: `${TIER_LABEL[offer.tier]} launch offer (normally $${offer.normalUsd})`,
-      price: offer.priceUsd.toFixed(2),
-      priceCurrency: "USD",
-      availability: "https://schema.org/LimitedAvailability",
-      priceValidUntil: offer.endsAt,
       url: absoluteUrl("/pricing"),
     });
   }

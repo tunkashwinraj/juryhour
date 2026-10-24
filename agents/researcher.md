@@ -1,6 +1,6 @@
 # Role: Researcher (actor `researcher`)
 
-Read `agents/common.md` first. You turn a paid order into a ready-to-field test: Card A (the customer's message, faithfully), Card B (a challenger rewrite, only for Proof / Launch Pack / Specialist), the juror profile and the attention check. You finish by calling `submit_test`.
+Read `agents/common.md` first. You turn a paid order into a ready-to-field test: Card A (the customer's message, faithfully), Card B (a challenger rewrite, only for Verdict / Retest / Specialist), the juror profile and the attention check. You finish by calling `submit_test`.
 
 Ops actions you use: `get_order`, `exa_contents`, `exa_search`, `submit_test`, `log_decision`. You never call Exa or any website directly.
 
@@ -19,9 +19,18 @@ curl -sS -X POST "$JURYHOUR_APP_URL/api/ops/get_order" \
 JSON
 ```
 
-Check: the order's stage is `RESEARCHING` (otherwise log `already_done` / `wrong_stage` and stop). Note `tier`, `url`, `pitch_text`, `buyer_desc`, `page_text`.
+Check: the order's stage is `RESEARCHING` (otherwise log `already_done` / `wrong_stage` and stop). Note `tier`, `rules.format`, `url`, `pitch_text`, `buyer_desc`, `page_text`, `parent_order_id`.
 
-Format by tier: `spark` and `pulse` → Card A only (`card_b` must be omitted/null). `proof`, `launch_pack`, `specialist` → Card A **and** Card B. `specialist` → `questions.specialist = true`.
+Follow `rules.format` (code enforces it in `submit_test`, by format, not tier name). Tiers and their customer-facing names:
+
+| tier | Customer name | format | What you write |
+|---|---|---|---|
+| `spark` | Quick Read | spark | **Card A only** (`card_b` omitted/null). The jury judges the headline first impression, so make Card A's headline the customer's headline verbatim when it fits. |
+| `proof` | Verdict | proof | Card A **and** Card B (challenger). |
+| `retest` | Retest | proof | Card A **and** Card B. Card A is the customer's **updated** page (this order's `url` / `pitch_text` / `page_text`), condensed faithfully as always. Card B is a **fresh** challenger written for the updated page: do not reuse the previous Verdict's Card B or winning copy (`parent_order_id` is the earlier Verdict; you don't need to load it). |
+| `specialist` | Specialist Jury | specialist | Card A **and** Card B, and `questions.specialist = true`. |
+
+Historical tiers you may still see: `pulse` (Card A only) and `launch_pack` (proof format).
 
 ### 2. Get the source text
 
@@ -60,7 +69,7 @@ One of: `name-the-outcome`, `specificity`, `proof`, `audience-call-out`, `price-
 All text plain, no emojis, no hype words the page doesn't use.
 
 - **Card A** = the customer's own message, condensed faithfully: their headline (verbatim when it fits), subheadline, their three most prominent benefits/features as bullets, their CTA. Do not improve it.
-- **Card B** (proof/launch_pack/specialist only) = the challenger. It may use **only facts present in the source text** (features, numbers, prices, audience, guarantees). The Ops API checks that numbers and brand terms in Card B exist in the page text and refuses otherwise. Never add testimonials, stats, customer counts, awards or guarantees that are not in the source.
+- **Card B** (proof format — Verdict, Retest — and specialist only) = the challenger. It may use **only facts present in the source text** (features, numbers, prices, audience, guarantees). The Ops API checks that numbers and brand terms in Card B exist in the page text and refuses otherwise. Never add testimonials, stats, customer counts, awards or guarantees that are not in the source.
 - Card limits (schema): `headline` 3–160 chars, `subheadline` 3–300, `bullets` exactly 3 items of 3–200 chars, `cta` 2–60.
 - **juror_profile**:
   - `panel_description`: ≤ 2 sentences, 10–400 chars, describing who should judge it (e.g. "US adults who sell handmade goods online and do their own bookkeeping."). **Never include the product name, brand or URL.** Base it on `buyer_desc` and the page.
@@ -112,7 +121,7 @@ Body shape (proof example):
 }
 ```
 
-For spark/pulse omit `card_b` (or send `null`).
+For Quick Read (`spark`, and historical `pulse`) omit `card_b` (or send `null`).
 
 ### 7. Refusals
 

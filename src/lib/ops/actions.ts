@@ -2,7 +2,7 @@
 // refuses with a Refusal; money and Terac actions run only through the shared, code-checked paths in
 // src/lib/orders/*. Untrusted text (page text, juror answers, emails) is only ever stored or passed
 // along as data; nothing here interprets it.
-import { REPORT_CAVEAT, MARGIN_FLOOR, TIERS } from "@/lib/constants";
+import { REPORT_CAVEAT, MARGIN_FLOOR, PUBLIC_TIER_LABELS, TIERS } from "@/lib/constants";
 import { refreshTag } from "@/lib/cache-tags";
 import { db, must } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
@@ -107,6 +107,8 @@ const getOrderAction: Handler<"get_order"> = async ({ order_id }) => {
         refund_usd: order.refund_usd,
         support_refund_used: order.support_refund_used,
         retest_available: order.retest_available,
+        parent_order_id: order.parent_order_id,
+        extra_jurors: order.extra_jurors ?? 0,
         has_report: order.report !== null,
       },
       rules: {
@@ -453,7 +455,7 @@ const disputeEvidenceAction: Handler<"dispute_evidence"> = async ({ dispute_id, 
   ) ?? []) as { actor: string; action: string; created_at: string }[];
   const base = env().NEXT_PUBLIC_APP_URL.replace(/\/+$/, "");
   const evidence: DisputeEvidence = {
-    product_description: `JuryHour ${order.tier} verdict: a message test of the customer's landing page with ${stats?.n_approved ?? 0} real, paid jurors recruited through Terac, delivered as an online report.`,
+    product_description: `JuryHour ${PUBLIC_TIER_LABELS[order.tier] ?? order.tier} order: a message test of the customer's landing page with ${stats?.n_approved ?? 0} real, paid jurors recruited through Terac, delivered as an online report.`,
     customer_email_address: order.email,
     service_date: (order.delivered_at ?? order.paid_at).slice(0, 10),
     access_activity_log: timeline.map((e) => `${e.created_at} ${e.actor} ${e.action}`).join("\n"),

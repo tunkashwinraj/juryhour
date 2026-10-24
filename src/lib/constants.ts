@@ -1,17 +1,64 @@
 // Business constants (SPEC §8). Frozen contract: only the lead changes this file.
 
+// Pricing v3 (founder decision 2026-10): two public plans — Quick Read (spark) $11 and Verdict (proof)
+// $299 launch offer — plus extra jurors ($7 each) and Retest ($59, sold only from a Verdict report).
+// Internal keys stay stable because orders/tests/prices rows reference them. pulse, launch_pack and
+// specialist are retired: kept so historical orders still resolve, never sold again.
 export const TIERS = {
-  spark:       { price: 11,   jurors: 3,  minJurors: 3,  minutes: 2,  jurorCostCap: 7,    format: "spark",      deadlineHours: 4 },
-  pulse:       { price: 49,   jurors: 10, minJurors: 8,  minutes: 4,  jurorCostCap: 25,   format: "pulse",      deadlineHours: 4 },
-  proof:       { price: 149,  jurors: 15, minJurors: 10, minutes: 8,  jurorCostCap: 60,   format: "proof",      deadlineHours: 8 },
-  launch_pack: { price: 199,  jurors: 15, minJurors: 10, minutes: 8,  jurorCostCap: 60,   format: "proof",      deadlineHours: 8, retest: true },
-  specialist:  { price: null, jurors: 8,  minJurors: 6,  minutes: 10, jurorCostCap: null, format: "specialist", deadlineHours: 72 },
+  spark:       { price: 11,   jurors: 3,  minJurors: 3,  minutes: 2,  jurorCostCap: 7,    format: "spark",      deadlineHours: 4,  sold: true },
+  pulse:       { price: 49,   jurors: 10, minJurors: 8,  minutes: 4,  jurorCostCap: 25,   format: "pulse",      deadlineHours: 4,  sold: false },
+  proof:       { price: 299,  jurors: 20, minJurors: 14, minutes: 8,  jurorCostCap: 80,   format: "proof",      deadlineHours: 8,  sold: true },
+  // Retest: proof format on the customer's UPDATED page vs a fresh rewrite. Needs a delivered proof
+  // parent (same email + mode) within RETEST_WINDOW_DAYS, one retest per parent (see lib/pricing).
+  retest:      { price: 59,   jurors: 8,  minJurors: 6,  minutes: 8,  jurorCostCap: 32,   format: "proof",      deadlineHours: 8,  sold: true },
+  launch_pack: { price: 199,  jurors: 15, minJurors: 10, minutes: 8,  jurorCostCap: 60,   format: "proof",      deadlineHours: 8,  sold: false, retest: true },
+  specialist:  { price: null, jurors: 8,  minJurors: 6,  minutes: 10, jurorCostCap: null, format: "specialist", deadlineHours: 72, sold: false },
 } as const;
 
 export type TierName = keyof typeof TIERS;
 export const TIER_NAMES = Object.keys(TIERS) as TierName[];
-export const BUYABLE_TIERS = ["spark", "pulse", "proof", "launch_pack"] as const satisfies readonly TierName[];
+/** Tiers sold through /api/checkout. (Specialist is retired: /api/quote refuses new quotes.) */
+export const BUYABLE_TIERS = ["spark", "proof", "retest"] as const satisfies readonly TierName[];
+/** Tiers that are no longer sold (historical orders only). */
+export const RETIRED_TIERS = ["pulse", "launch_pack", "specialist"] as const satisfies readonly TierName[];
 
+/** Customer-facing names. Use these everywhere a tier is shown to a person. */
+export const TIER_LABELS: Record<TierName, string> = {
+  spark: "Quick Read",
+  pulse: "Pulse (retired)",
+  proof: "Verdict",
+  retest: "Retest",
+  launch_pack: "Launch Pack (retired)",
+  specialist: "Specialist Jury",
+};
+
+/** Customer-facing names for every surface a buyer sees (pages, emails, order/report pages, JSON-LD).
+ *  Retired tiers never show their old names to customers. */
+export const PUBLIC_TIER_LABELS: Record<TierName, string> = {
+  ...TIER_LABELS,
+  pulse: "Jury test",
+  launch_pack: "Verdict with retest",
+  specialist: "Custom jury",
+};
+
+/** Verdict launch-offer copy. Copy only: the Dec 1 price change is made by the founder, not by code. */
+export const VERDICT_REGULAR_USD = 499;
+export const VERDICT_REGULAR_FROM = "Dec 1";
+
+/** Badge on the Verdict card. Single constant: "Most popular" would be a false claim before real sales. */
+export const VERDICT_BADGE = "Recommended";
+
+/** A Retest must be bought within this many days of its Verdict's delivery. */
+export const RETEST_WINDOW_DAYS = 30;
+
+/** Extra jurors: $7 each, 0–20 per order, on Quick Read, Verdict and Retest. Never discounted.
+ *  Panel size = tier jurors + extra; the juror cost cap rises pro rata. */
+export const EXTRA_JUROR_USD = 7;
+export const MAX_EXTRA_JURORS = 20;
+export const EXTRA_JUROR_TIERS = ["spark", "proof", "retest"] as const satisfies readonly TierName[];
+
+// Legacy add-ons (extra5/rush) are no longer sold; new orders use `extra_jurors`. Kept so historical
+// orders that carry them still get the right panel size and deadline (guardrails.panelSpec).
 export const ADDONS = { extra5: 15, rush: 9, secondPage: 9 } as const;
 export type AddonName = keyof typeof ADDONS;
 export const ADDON_EXTRA_JURORS = 5;   // extra5 adds this many jurors (and raises jurorCostCap pro rata)

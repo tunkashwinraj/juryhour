@@ -197,3 +197,15 @@
 /* /preview/[id] */
 .pageMeta { font-size: var(--text-14, 14px); color: var(--muted, #556); overflow-wrap: anywhere; }
 .confirm { display: grid; gap: var(--space-2, 8px); max-width: 28rem; margin-top: var(--space-4, 16px); }
+
+.stepper { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2, 8px); }
+.stepBtn {
+  min-width: 44px; min-height: 44px; font: inherit; font-size: 1.25rem; line-height: 1;
+  border: 1px solid var(--rule, #c9ccd4); background: var(--paper, #fff); color: inherit; border-radius: 6px; cursor: pointer;
+}
+.stepBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.stepBtn:focus-visible, .stepInput:focus-visible { outline: 2px solid var(--focus, currentColor); outline-offset: 2px; }
+.stepInput {
+  width: 4.5rem; min-height: 44px; font: inherit; font-variant-numeric: tabular-nums; text-align: center;
+  border: 1px solid var(--rule, #c9ccd4); border-radius: 6px; background: var(--paper, #fff); color: inherit;
+}

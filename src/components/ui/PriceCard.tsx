@@ -7,8 +7,10 @@ export type PriceCardProps = {
   price: number | null;
   /** Shown before the price, e.g. "from". */
   priceNote?: ReactNode;
-  /** Struck-through regular price, rendered as "normally $149". */
+  /** Struck-through earlier price shown before the price. Only for a price that was actually charged before. */
   compareAt?: number | null;
+  /** Shown after the price, e.g. "launch offer · regular $499 from Dec 1" or "with HALF". */
+  priceSuffix?: ReactNode;
   jurors?: number | null;
   summary: string;
   bullets: string[];
@@ -26,6 +28,7 @@ export function PriceCard({
   price,
   priceNote,
   compareAt,
+  priceSuffix,
   jurors,
   summary,
   bullets,
@@ -46,13 +49,17 @@ export function PriceCard({
       </div>
       <p className="ui-price__amount">
         {priceNote ? <span className="ui-price__note">{priceNote} </span> : null}
-        <span className="ui-price__value">{price == null ? "Quote" : formatPrice(price)}</span>
         {showCompare ? (
           <span className="ui-price__compare">
-            {" "}
-            normally <s>{formatPrice(compareAt)}</s>
+            <span className="ui-visually-hidden">Regular price </span>
+            <s>{formatPrice(compareAt)}</s>{" "}
           </span>
         ) : null}
+        <span className="ui-price__value">
+          {showCompare ? <span className="ui-visually-hidden">now </span> : null}
+          {price == null ? "Quote" : formatPrice(price)}
+        </span>
+        {priceSuffix ? <span className="ui-price__note"> {priceSuffix}</span> : null}
       </p>
       {jurors != null ? (
         <p className="ui-price__jurors">

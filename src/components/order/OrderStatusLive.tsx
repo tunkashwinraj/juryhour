@@ -1,6 +1,8 @@
 "use client";
 // Order status island: polls GET /api/order/[token] every 4s until the order is terminal.
 import { useEffect, useState } from "react";
+import { PUBLIC_TIER_LABELS } from "@/lib/constants";
+import { etDeadline } from "@/lib/et-time";
 import type { OrderStatus } from "@/lib/queries";
 import { SandboxBadge } from "@/components/SiteHeader";
 import {
@@ -15,15 +17,18 @@ import {
 
 const POLL_MS = 4000;
 
-const TIER_LABEL: Record<string, string> = {
-  spark: "Spark",
-  pulse: "Pulse",
-  proof: "Proof",
-  launch_pack: "Launch Pack",
-  specialist: "Specialist Jury",
-};
+const TIER_LABEL: Record<string, string> = PUBLIC_TIER_LABELS;
 
-export function OrderStatusLive({ initial, paidParam }: { initial: OrderStatus; paidParam: boolean }) {
+export function OrderStatusLive({
+  initial,
+  paidParam,
+  orderRef = null,
+}: {
+  initial: OrderStatus;
+  paidParam: boolean;
+  /** "JH-F9DA6201": customers quote it to support. */
+  orderRef?: string | null;
+}) {
   const [order, setOrder] = useState(initial);
   const [now, setNow] = useState<number | null>(null);
   const [stale, setStale] = useState(false);
@@ -62,7 +67,10 @@ export function OrderStatusLive({ initial, paidParam }: { initial: OrderStatus; 
   });
   const notice = refundNotice({ stage: order.stage, refundUsd: order.refund_usd });
   const delivered = order.stage === "DELIVERED" || order.stage === "PARTIAL";
-  const eta = !delivered && !isTerminal(order.stage) && now !== null ? etaText(order.deadline_at, now) : null;
+  const etaBase = !delivered && !isTerminal(order.stage) && now !== null ? etaText(order.deadline_at, now) : null;
+  // Add the clock time in ET while the deadline is still ahead ("Verdict due within 3h 20m (by 7:03pm ET today).").
+  const etaBy = etaBase && now !== null && Date.parse(order.deadline_at ?? "") > now ? etDeadline(order.deadline_at, new Date(now)) : null;
+  const eta = etaBase && etaBy ? etaBase.replace(/\.$/, ` (${etaBy}).`) : etaBase;
   const n = order.requested_n ?? jurorsForTier(order.tier);
   const bad = order.stage === "REFUNDED" || order.stage === "FAILED" || order.stage === "BLOCKED";
 
@@ -71,6 +79,7 @@ export function OrderStatusLive({ initial, paidParam }: { initial: OrderStatus; 
       <div className="status-head">
         <span className="badge">{TIER_LABEL[order.tier] ?? order.tier}</span>
         <SandboxBadge mode={order.mode} />
+        {orderRef ? <span className="small muted">Order {orderRef}</span> : null}
       </div>
       <h1>{stageHeadline(order.stage, paidParam)}</h1>
       {order.mode === "sandbox" ? (
@@ -80,7 +89,7 @@ export function OrderStatusLive({ initial, paidParam }: { initial: OrderStatus; 
       {order.stage === "CREATED" && order.tier === "specialist" && order.price_usd === null ? (
         <div className="notice" role="status">
           <p>
-            We&apos;re getting a price for your specialist jury. You&apos;ll get an email with a checkout link as soon as
+            We&apos;re getting a price for your custom jury. You&apos;ll get an email with a checkout link as soon as
             it&apos;s quoted; the quote holds for 48 hours.
           </p>
         </div>

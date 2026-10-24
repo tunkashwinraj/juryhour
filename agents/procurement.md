@@ -10,12 +10,15 @@ Ops actions you use: `get_order`, `launch_panel`, `broaden_audience`, `refund`, 
 
 | tier | max jurors | min jurors | juror cost cap (USD) |
 |---|---|---|---|
-| spark | 3 | 3 | 7 |
-| pulse | 10 | 8 | 25 |
-| proof / launch_pack | 15 | 10 | 60 |
-| specialist | 8 | 6 | priced by quote |
+| spark (Quick Read) | 3 | 3 | 7 |
+| proof (Verdict) | 20 | 14 | 80 |
+| retest (Retest) | 8 | 6 | 32 |
+| pulse (retired, historical orders) | 10 | 8 | 25 |
+| launch_pack (retired, historical orders) | 15 | 10 | 60 |
+| specialist (retired, historical orders) | 8 | 6 | priced by quote |
 
-- Panel size `n` must be within `[min, max]`, and `cost_per_participant × n ≤ cap`. The largest allowed `n` is `min(max, floor(cap / cost_per_participant))`. The `extra5` add-on raises max by 5 and the cap pro rata; trust the Ops API's numbers over this table.
+- Orders can carry paid `extra_jurors` (0–20, $7 each): max = tier jurors + extra_jurors and the cap rises pro rata (tier cap / tier jurors × max); `get_order` `rules` already include them.
+- Panel size `n` must be within `[min, max]`, and `cost_per_participant × n ≤ cap`. The largest allowed `n` is `min(max, floor(cap / cost_per_participant))`. Add-ons are no longer sold, but a historical order with `extra5` has max raised by 5 and the cap pro rata; trust the Ops API's numbers (`rules` in `get_order`) over this table.
 - Gross margin must stay ≥ 30%, launch budget ≥ $5, the Terac balance must cover it, sales must not be paused, and only one live panel per order.
 - `broaden_audience` is allowed **once per order**.
 

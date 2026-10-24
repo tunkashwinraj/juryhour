@@ -2,6 +2,7 @@
 // and is rendered inside blocks labeled "Example". Competitor facts carry their source in COMPARE.
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { MAX_EXTRA_JURORS, TIERS } from "@/lib/constants";
 
 /** Partner logos need written permission (WEBSITE_SPEC §5.3). TODO: flip only with approval on file. */
 export const PARTNER_LOGOS_APPROVED = false;
@@ -9,7 +10,7 @@ export const PARTNER_LOGOS_APPROVED = false;
 /** One made-up case reused by the hero artifact and the report excerpt. Not a customer result. */
 export const EXAMPLE_CASE = {
   caseNo: "0142",
-  tier: "Proof",
+  tier: "Verdict",
   jurors: 15,
   delivered: "3h 40m",
   headlineA: "The all-in-one workspace for modern teams.",
@@ -101,7 +102,7 @@ export function compareRows(jhPrice: string): { label: string; cells: ReactNode[
       ],
     },
     { label: "Rewrites your copy", cells: ["Yes, an AI challenger", "—", "—", "—", "No"] },
-    { label: "Tests old vs new", cells: ["Yes (Proof): blind, random order", "—", "—", "—", "Not blind"] },
+    { label: "Tests old vs new", cells: ["Yes (Verdict): blind, random order", "—", "—", "—", "Not blind"] },
     {
       label: "Price per test",
       cells: [jhPrice, "$20K/yr plan, or pay per test", "From $1 per response (min. 15)", "Quote only", "Free"],
@@ -178,26 +179,24 @@ export const HOME_FAQ: FaqItem[] = [
     ),
   },
   {
-    q: "Is 15 people enough?",
+    q: `Is ${TIERS.proof.jurors} people enough?`,
     aText:
-      "For a directional signal, yes: 15 people who match your buyer, judging both versions blind, will show whether strangers get your page and which version they prefer. It's not a scientific study and it can't predict sales. If you sell to a narrow professional audience, use Specialist Jury, which recruits verified professionals by job, industry and seniority.",
+      `For a directional signal, yes: ${TIERS.proof.jurors} people who match your buyer, judging both versions blind, will show whether strangers get your page and which version they prefer. It's not a scientific study and it can't predict sales. You can add up to ${MAX_EXTRA_JURORS} extra jurors if you want a bigger panel.`,
     a: (
       <p>
-        For a directional signal, yes: 15 people who match your buyer, judging both versions blind, will show whether
-        strangers get your page and which version they prefer. It&rsquo;s not a scientific study and it can&rsquo;t
-        predict sales. If you sell to a narrow professional audience, use Specialist Jury, which recruits verified
-        professionals by job, industry and seniority.
+        For a directional signal, yes: {TIERS.proof.jurors} people who match your buyer, judging both versions blind,
+        will show whether strangers get your page and which version they prefer. It&rsquo;s not a scientific study and
+        it can&rsquo;t predict sales. You can add up to {MAX_EXTRA_JURORS} extra jurors if you want a bigger panel.
       </p>
     ),
   },
   {
     q: "How fast is it?",
     aText:
-      "The free AI preview takes about 10 seconds. Spark, Pulse, Proof and Launch Pack are delivered the same day. Specialist Jury takes 24 to 72 hours because the audience is harder to recruit.",
+      "The free AI preview takes about 10 seconds. Quick Read and Verdict are delivered the same day.",
     a: (
       <p>
-        The free AI preview takes about 10 seconds. Spark, Pulse, Proof and Launch Pack are delivered the same day.
-        Specialist Jury takes 24 to 72 hours because the audience is harder to recruit.
+        The free AI preview takes about 10 seconds. Quick Read and Verdict are delivered the same day.
       </p>
     ),
   },

@@ -14,33 +14,30 @@ JuryHour describes itself as "a company with zero employees". AI agents run rese
 
 1. Paste your page. You enter a public URL (or paste your pitch) and describe your buyer. A free AI preview, with no card and no login, shows what your page communicates, its weakest line and a suggested rewrite.
 2. We hire your jury. After you pay, an agent reads your page, researches your market and competitors, and writes a challenger version (Card B) next to a faithful summary of your page (Card A). Real people who match your buyer are recruited, screened and identity-verified through Terac.
-3. Jurors judge. On Proof-format tests each juror sees both versions for 5 seconds, in random order, without knowing which is yours, then answers a fixed set of questions in their own words.
+3. Jurors judge. In a Verdict each juror sees both versions for 5 seconds, in random order, without knowing which is yours, then answers a fixed set of questions in their own words.
 4. Quality checks. Answers are checked for time on task, an attention check, minimum length, and graded by AI. Clearly low-quality work is rejected with a written reason and isn't paid for.
 5. You get the verdict. Which version won and by how much, a scorecard, the top fixes with juror quotes as evidence, issues neither version solved, and the winning copy ready to paste. Every quote is verbatim from a stored juror answer and every number is computed from the database; a checker blocks delivery otherwise.
 
-Limits: panels are small (3 to 20 people), audience matching is approximate, and stated reactions can differ from real buying behavior. Treat results as directional signal. Only public pages are tested; do not submit confidential material. JuryHour delivers copy and findings; it does not edit your site.
+Limits: panels are small (3 to 40 people), audience matching is approximate, and stated reactions can differ from real buying behavior. Treat results as directional signal. Only public pages are tested; do not submit confidential material. JuryHour delivers copy and findings; it does not edit your site.
 
 ## Packages and prices (USD, as of Oct 24, 2026)
 
 | Package | Price | Jurors (minimum to deliver) | What you get | Delivery window |
 |---|---|---|---|---|
-| Spark | $11 | 3 (3) | 2-minute first impression of your headline, AI critique, 1 rewritten headline (untested) | 4 hours |
-| Pulse | $49 | 10 (8) | 4-minute reaction to your current page, full report with anonymous quotes, rewritten hero section (untested) | 4 hours |
-| Proof | $149 | 15 (10) | 8-minute test: your page vs our AI rewrite in random order; verdict, scorecard, top fixes, winning copy | 8 hours |
-| Launch Pack | $199 | 15 (10) | Proof now plus one free retest after you update your page | 8 hours, plus the retest |
-| Specialist Jury | from $499, quoted | 8 (6) | Verified professionals matching your buyer (job, industry, seniority); buyer objections and price reaction | 24–72 hours |
+| Quick Read | $11 | 3 (3) | 2-minute reaction to your headline, AI critique, 1 rewritten headline (untested) | 4 hours |
+| Verdict (recommended) | $299 launch offer; regular $499 from Dec 1, 2026 | 20 (14) | 8-minute test: your page vs our AI rewrite, blind and in random order; winner, scorecard, top fixes, winning copy | 8 hours |
 
-- Launch offer (Oct 24, 2026 only): Proof for $99 instead of $149 until 6:00pm ET (22:00 UTC) that day, applied automatically at checkout. It is not extended; after it ends Proof is $149.
-- Add-ons: +5 jurors for $15; Rush for $9, which halves the delivery window.
-- Upgrade credit: a Spark purchase counts toward a higher package if you upgrade within 24 hours.
-- Promo codes (for example LOVABLE or WHOP) record where you came from. They do not give discounts.
+- Code HALF: your first Verdict is $149 (50% off the Verdict price, rounded down) through Nov 30, 2026 (ET). One per customer (the first Verdict for your email). Applied at checkout when you arrive with the code in the link or type it in "Have a code?". It applies to the Verdict price only (not extra jurors) and works with the Quick Read upgrade credit ($149 − $11 = $138).
+- Extra jurors: add up to 20 to a Quick Read or Verdict at $7 each. The panel grows by that many people. Codes and credits never discount them.
+- Upgrade credit: a Quick Read counts toward a Verdict if you upgrade within 24 hours ($299 − $11 = $288).
+- Partner codes (for example LOVABLE or WHOP) record where you came from. They do not give discounts.
 - Payments, refunds and disputes are processed by Whop.
 
 ## Refund policy (enforced in code)
 
 - Full refund, automatically, if we can't recruit your audience within your package's budget (after shrinking the panel to its minimum or broadening the audience once).
 - Full refund, automatically, if fewer than the minimum number of jurors (table above) have given usable answers when the deadline passes, after a 1-hour grace period.
-- Pro-rata refund, automatically, if the minimum is met but the panel is short: price paid × (jurors requested − jurors delivered) ÷ jurors requested. Example: a $149 Proof with 15 jurors requested that delivers 12 refunds $29.80. "Jurors requested" is the size of the panel actually launched.
+- Pro-rata refund, automatically, if the minimum is met but the panel is short: price paid × (jurors requested − jurors delivered) ÷ jurors requested. Example: a $299 Verdict with 20 jurors requested that delivers 16 refunds $59.80. "Jurors requested" is the size of the panel actually launched.
 - Full refund, automatically, if a step of the order fails 3 times.
 - Refund on request, once per order, if the verdict is more than 2× its delivery window late or the report failed.
 - No refund because a verdict wasn't the one you hoped for. Refused content is never charged.

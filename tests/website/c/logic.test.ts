@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   PREVIEW_STORAGE_KEY,
+  TIER_LABELS,
+  allowsExtraJurors,
   buildCheckoutBody,
   checkoutOutcome,
+  clampExtraJurors,
+  couponFor,
   decideTierAction,
   displayPrice,
-  liveOffer,
+  isCtaTier,
   loadingStep,
   normalizeUrl,
   parseStoredPreview,
@@ -126,10 +130,11 @@ describe("decideTierAction (TierCta branching)", () => {
 });
 
 describe("buildCheckoutBody", () => {
-  it("matches the /api/checkout contract and never sends secondPage", () => {
+  it("matches the /api/checkout contract: no legacy add-ons, extra jurors and coupon when set", () => {
     const body = buildCheckoutBody({
       tier: "proof",
-      addons: ["extra5", "secondPage", "rush", "extra5"],
+      extraJurors: 4,
+      coupon: "HALF",
       input: { url: "https://e.com/", buyer_desc: "founders", email: "a@b.co" },
       previewId: ID,
       parentOrderId: "not-a-uuid",
@@ -138,7 +143,9 @@ describe("buildCheckoutBody", () => {
     });
     expect(body).toEqual({
       tier: "proof",
-      addons: ["extra5", "rush"],
+      addons: [],
+      extra_jurors: 4,
+      coupon: "HALF",
       email: "a@b.co",
       buyer_desc: "founders",
       url: "https://e.com/",
@@ -148,8 +155,40 @@ describe("buildCheckoutBody", () => {
     });
   });
   it("pitch target, no optional fields", () => {
-    const body = buildCheckoutBody({ tier: "spark", addons: [], input: { pitch_text: "p".repeat(50), buyer_desc: "b", email: "a@b.co" } });
+    const body = buildCheckoutBody({ tier: "spark", input: { pitch_text: "p".repeat(50), buyer_desc: "b", email: "a@b.co" } });
     expect(body).toEqual({ tier: "spark", addons: [], email: "a@b.co", buyer_desc: "b", pitch_text: "p".repeat(50) });
+  });
+  it("clamps extra jurors to 0–20 and sends a retest parent", () => {
+    const input = { url: "https://e.com/", buyer_desc: "b", email: "a@b.co" };
+    expect(buildCheckoutBody({ tier: "retest", extraJurors: 40, input, parentOrderId: ID })).toMatchObject({ tier: "retest", extra_jurors: 20, parent_order_id: ID });
+    expect(buildCheckoutBody({ tier: "proof", extraJurors: -3, input })).not.toHaveProperty("extra_jurors");
+  });
+});
+
+describe("tiers, extra jurors and coupon (client side)", () => {
+  const coupon = { code: "HALF", tier: "proof" as const, percentOff: 50, endsAt: "2026-12-01T05:00:00.000Z", firstOrderOnly: true };
+  it("CTA tiers are the sold ones; old ?tier= links are ignored", () => {
+    expect(["spark", "proof", "retest", "specialist", "pulse", "launch_pack"].map(isCtaTier)).toEqual([true, true, true, false, false, false]);
+    expect([TIER_LABELS.spark, TIER_LABELS.proof, TIER_LABELS.retest]).toEqual(["Quick Read", "Verdict", "Retest"]);
+    expect(Object.values(TIER_LABELS).join(" ")).not.toMatch(/Spark|Pulse|Proof|Launch Pack|Specialist/);
+  });
+  it("extra jurors: whole numbers 0–20, only on Quick Read / Verdict / Retest", () => {
+    expect([-1, 0, 7.9, 20, 99, "3", "x"].map(clampExtraJurors)).toEqual([0, 0, 7, 20, 20, 3, 0]);
+    expect(["spark", "proof", "retest", "specialist"].map((t) => allowsExtraJurors(t as never))).toEqual([true, true, true, false]);
+  });
+  it("couponFor: only on the Verdict, only with the matching code (any case)", () => {
+    expect(couponFor("proof", coupon, "half")).toBe(coupon);
+    expect(couponFor("spark", coupon, "HALF")).toBeNull();
+    expect(couponFor("retest", coupon, "HALF")).toBeNull();
+    expect(couponFor("proof", coupon, "TODAY50")).toBeNull();
+    expect(couponFor("proof", coupon, null)).toBeNull();
+    expect(couponFor("proof", null, "HALF")).toBeNull();
+  });
+  it("refusal codes from checkout show the server's message", () => {
+    for (const code of ["coupon_unknown", "coupon_expired", "coupon_not_applicable", "coupon_already_used", "extra_jurors_out_of_range", "margin_too_low", "tier_not_offered", "addons_not_offered", "retest_window_expired"]) {
+      const o = checkoutOutcome(400, { ok: false, code, error: "Server says why." });
+      expect(o).toEqual({ kind: "error", message: "Server says why. Nothing was charged." });
+    }
   });
 });
 
@@ -219,19 +258,11 @@ describe("stored preview (sessionStorage handoff)", () => {
   });
 });
 
-describe("launch offer display", () => {
-  const offer = { tier: "proof" as const, priceUsd: 99, normalUsd: 149, endsAt: "2026-10-24T22:00:00Z" };
-  const before = Date.parse("2026-10-24T21:00:00Z");
-  const after = Date.parse("2026-10-24T22:00:01Z");
-  it("shows the launch price with the normal price until endsAt", () => {
-    expect(displayPrice("proof", { proof: 149 }, offer, before)).toEqual({ price: 99, compareAt: 149 });
-    expect(displayPrice("spark", { spark: 11 }, offer, before)).toEqual({ price: 11, compareAt: null });
-  });
-  it("drops it the moment it ends (stale static shell)", () => {
-    expect(liveOffer(offer, after)).toBeNull();
-    expect(displayPrice("proof", { proof: 149 }, offer, after)).toEqual({ price: 149, compareAt: null });
-  });
-  it("falls back to constants without server prices", () => {
-    expect(displayPrice("pulse", undefined, null, before)).toEqual({ price: 49, compareAt: null });
+describe("display prices", () => {
+  it("server price, else the constant", () => {
+    expect(displayPrice("proof", { proof: 279 })).toBe(279);
+    expect(displayPrice("proof", undefined)).toBe(299);
+    expect(displayPrice("retest", {})).toBe(59);
+    expect(displayPrice("specialist", undefined)).toBeNull();
   });
 });

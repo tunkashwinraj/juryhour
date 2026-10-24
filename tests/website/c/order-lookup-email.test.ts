@@ -22,7 +22,8 @@ describe("order_lookup email", () => {
     expect(out.text).toContain("https://juryhour.test/r/tok_delivered_0123456789abcdef");
     expect(out.text).toContain("https://juryhour.test/o/tok_quote_0123456789abcdefghij");
     expect(out.text).not.toContain("/r/tok_quote");
-    expect(out.text).toContain("Specialist Jury");
+    expect(out.text).toContain("Custom jury");
+    expect(out.text).not.toMatch(/Specialist|Spark|Proof|Pulse|Launch Pack/);
     expect(out.text).toContain("Quote requested");
     expect(out.html).not.toContain("<img src=x");
     expect(out.text).toContain(FOOTER_LINE);

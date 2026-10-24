@@ -29,7 +29,7 @@ const seg: Segment = {
   example: {
     title: "What would a verdict look like for a course or community?",
     answer:
-      "Here's an illustrative Proof for a course that teaches freelance designers to find clients. Card A is the page as written; card B is the kind of challenger our agent writes, using only facts on the page.",
+      "Here's an illustrative Verdict for a course that teaches freelance designers to find clients. Card A is the page as written; card B is the kind of challenger our agent writes, using only facts on the page.",
     a: {
       headline: "Level up your freelance game",
       subheadline: "Join the community that's changing the game. Exclusive content, live calls and more.",
@@ -54,7 +54,7 @@ const seg: Segment = {
   highlight: "proof",
   pricingTitle: "Which package fits a Whop product?",
   pricingAnswer:
-    "Proof is the one we recommend for a sales page: 15 real people compare your page with our rewrite and you get the winner. Spark is a quick first read on your headline.",
+    "Verdict is the one we recommend for a sales page: 20 real people compare your page with our rewrite and you get the winner. Quick Read is a fast first impression of your headline.",
   faqTitle: "Questions from Whop sellers",
   faq: faqByIds(["what-tested", "enough", "who-jurors", "codes", "refunds", "guarantee", "unreleased"]),
 };

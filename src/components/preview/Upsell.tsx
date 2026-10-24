@@ -1,44 +1,28 @@
 "use client";
-// The step after a preview (WEBSITE_SPEC §7.3): three compact tier cards (Spark, Proof
-// [recommended], Pulse — plus Launch Pack / Specialist when that tier was preselected), the two
-// add-ons we sell (+5 jurors, Rush), an optional partner/referral code, and the capacity state.
-// Prices come from the server via props (HeroPreview `prices` + `offer`); the launch price is
-// dropped client-side the moment its end time passes.
-import { useEffect, useId, useState } from "react";
-import { Badge, Banner, Card, Input } from "@/components/ui";
-import { ADDONS, ADDON_EXTRA_JURORS, SPECIALIST_PRICE, TIERS, type AddonName } from "@/lib/constants";
-import { getAttribution, normalizeCode } from "@/lib/attribution";
+// The step after a preview (WEBSITE_SPEC §7.3): compact tier cards — Quick Read and Verdict
+// [VERDICT_BADGE], or Retest + Verdict when arriving from the link in a Verdict report
+// (?tier=retest&parent=<order id>) — an extra-jurors stepper ($7 each, 0–20) with live totals, the code
+// field (HALF or a referral code), and the capacity state.
+// Prices come from the server via props (HeroPreview `prices`); /api/checkout re-checks everything.
+import { useId } from "react";
+import { Badge, Banner, Card } from "@/components/ui";
+import { EXTRA_JUROR_USD, MAX_EXTRA_JURORS, TIERS, UPGRADE_CREDIT_HOURS, VERDICT_BADGE } from "@/lib/constants";
+import { VERDICT_LAUNCH_NOTE, couponEndsLabel } from "@/components/pricing/pricing-data";
+import { couponPrice } from "@/lib/coupons";
 import { usd } from "@/components/rules";
-import { TIER_LABELS, displayPrice, type CtaTier, type OfferLike, type PriceMap } from "./logic";
+import { CouponCodeField } from "./CouponCodeField";
+import { TIER_LABELS, allowsExtraJurors, clampExtraJurors, displayPrice, type CtaTier, type PriceMap } from "./logic";
 import { TierCta } from "./TierCta";
 import { TrackOnView, usePreview } from "./PreviewProvider";
 import { WaitlistForm } from "./LeadForms";
 import styles from "./preview.module.css";
 
-const ADDON_OPTIONS: { key: AddonName; label: string }[] = [
-  { key: "extra5", label: `+${ADDON_EXTRA_JURORS} more jurors` },
-  { key: "rush", label: "Rush: your panel goes first" },
-];
-
 const SUMMARY: Record<CtaTier, string> = {
-  spark: `${TIERS.spark.jurors} real people · first impression of your headline`,
-  pulse: `${TIERS.pulse.jurors} real people · reaction to your current page`,
-  proof: `${TIERS.proof.jurors} real people · your page vs our rewrite`,
-  launch_pack: "Proof now + a free retest after you update your page",
-  specialist: `${TIERS.specialist.jurors} verified professionals · quoted, 24–72 h`,
+  spark: "first impression of your headline",
+  proof: "your page vs our rewrite, judged blind",
+  retest: "your updated page vs a fresh rewrite",
+  specialist: "custom panel",
 };
-
-/** False once the offer's end time has passed (checked in the browser only, no hydration drift). */
-function useOfferStillLive(offer: OfferLike): boolean {
-  const [expired, setExpired] = useState(false);
-  useEffect(() => {
-    if (!offer) return;
-    const ms = Date.parse(offer.endsAt) - Date.now();
-    const t = setTimeout(() => setExpired(true), Math.max(0, Math.min(ms, 2_147_000_000)));
-    return () => clearTimeout(t);
-  }, [offer]);
-  return !expired;
-}
 
 export function CapacityBanner() {
   const { salesPaused } = usePreview();
@@ -56,36 +40,23 @@ export function CapacityBanner() {
 
 export function Upsell({
   prices,
-  offer,
   title = "This is AI guessing. Want real people to judge it?",
 }: {
   prices?: PriceMap;
-  offer?: OfferLike;
   title?: string;
 }) {
   const ctx = usePreview();
-  const codeId = useId();
-  const live = useOfferStillLive(offer);
-  const [codeOpen, setCodeOpen] = useState(false);
-  const [codeDraft, setCodeDraft] = useState("");
-  const [codeError, setCodeError] = useState<string | null>(null);
+  const stepperId = useId();
 
   if (ctx.refused) return null;
 
-  const tiers: CtaTier[] = ["spark", "proof", "pulse"];
-  if (ctx.selectedTier && !tiers.includes(ctx.selectedTier)) tiers.push(ctx.selectedTier);
-  const emphasized: CtaTier = ctx.selectedTier ?? "proof";
-  const addonTotal = ctx.addons.reduce((s, a) => s + ADDONS[a], 0);
-  const effectiveOffer = live ? offer : null;
-
-  function toggleAddon(a: AddonName) {
-    ctx.setAddons(ctx.addons.includes(a) ? ctx.addons.filter((x) => x !== a) : [...ctx.addons, a]);
-  }
-
-  function openCode() {
-    setCodeOpen(true);
-    setCodeDraft(ctx.code ?? getAttribution().code ?? "");
-  }
+  // A Retest only makes sense with the parent Verdict from the report link; without it, don't offer it.
+  const wantsRetest = ctx.selectedTier === "retest" && Boolean(ctx.parentOrderId);
+  const tiers: CtaTier[] = wantsRetest ? ["retest", "proof"] : ["spark", "proof"];
+  const emphasized: CtaTier = wantsRetest ? "retest" : ctx.selectedTier && tiers.includes(ctx.selectedTier) ? ctx.selectedTier : "proof";
+  const quickReadPrice = displayPrice("spark", prices) ?? TIERS.spark.price;
+  const extra = ctx.extraJurors;
+  const extraUsd = extra * EXTRA_JUROR_USD;
 
   return (
     <div className={styles.upsell}>
@@ -99,30 +70,43 @@ export function Upsell({
 
       <ul className={styles.tierList}>
         {tiers.map((t) => {
-          // Expiry is enforced by useOfferStillLive (browser clock), so pass 0 here.
-          const { price, compareAt } = displayPrice(t, prices, effectiveOffer, 0);
+          const list = displayPrice(t, prices);
+          const applied = ctx.appliedCoupon(t);
+          const base = list !== null && applied ? couponPrice(list, applied.percentOff) : list;
+          const extras = allowsExtraJurors(t);
           const isEm = t === emphasized;
+          const advertised = !applied && ctx.coupon && ctx.coupon.tier === t && list !== null ? ctx.coupon : null;
           return (
             <li key={t}>
               <Card tone={isEm ? "raised" : "plain"}>
                 <div className={styles.tierHead}>
                   <span className={styles.tierName}>{TIER_LABELS[t]}</span>
-                  {t === "proof" ? <Badge tone="signal">Recommended</Badge> : null}
+                  {t === "proof" ? <Badge tone="signal">{VERDICT_BADGE}</Badge> : null}
                 </div>
                 <p className={styles.tierPrice}>
-                  {t === "specialist" ? (
-                    <>from {usd(SPECIALIST_PRICE(0))}</>
-                  ) : (
-                    <>
-                      {usd(price)}
-                      {compareAt ? <span className={styles.compareAt}> normally {usd(compareAt)}</span> : null}
-                      {addonTotal > 0 && price !== null ? (
-                        <span className={styles.withAddons}> · {usd(price + addonTotal)} with add-ons</span>
-                      ) : null}
-                    </>
-                  )}
+                  {usd(base)}
+                  {applied ? (
+                    <span className={styles.compareAt}> with {applied.code} · first Verdict</span>
+                  ) : t === "proof" ? (
+                    <span className={styles.compareAt}> {VERDICT_LAUNCH_NOTE}</span>
+                  ) : null}
+                  {extras && extra > 0 && base !== null ? (
+                    <span className={styles.withAddons}>
+                      {" "}
+                      · {usd(base + extraUsd)} with {extra} extra {extra === 1 ? "juror" : "jurors"}
+                    </span>
+                  ) : null}
                 </p>
-                <p className={styles.small}>{SUMMARY[t]}</p>
+                <p className={styles.small}>
+                  {extras ? `${TIERS[t as "spark" | "proof" | "retest"].jurors + extra} real people · ` : null}
+                  {SUMMARY[t]}
+                </p>
+                {advertised && list !== null ? (
+                  <p className={styles.small}>
+                    First Verdict? {usd(couponPrice(list, advertised.percentOff))} with code {advertised.code} through{" "}
+                    {couponEndsLabel(advertised.endsAt)}.
+                  </p>
+                ) : null}
                 <TierCta tier={t} variant={isEm ? "primary" : "secondary"} />
               </Card>
             </li>
@@ -132,51 +116,56 @@ export function Upsell({
 
       {!ctx.salesPaused ? (
         <fieldset className={styles.addons}>
-          <legend>Add-ons (optional)</legend>
-          {ADDON_OPTIONS.map((a) => (
-            <label key={a.key} className={styles.check}>
-              <input type="checkbox" checked={ctx.addons.includes(a.key)} onChange={() => toggleAddon(a.key)} />
-              <span>
-                {a.label} <span className={styles.num}>+{usd(ADDONS[a.key])}</span>
-              </span>
-            </label>
-          ))}
+          <legend>Extra jurors (optional)</legend>
+          <div className={styles.stepper}>
+            <button
+              type="button"
+              className={styles.stepBtn}
+              aria-label="One fewer extra juror"
+              aria-controls={stepperId}
+              disabled={extra <= 0}
+              onClick={() => ctx.setExtraJurors(extra - 1)}
+            >
+              −
+            </button>
+            <input
+              id={stepperId}
+              className={styles.stepInput}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={MAX_EXTRA_JURORS}
+              step={1}
+              value={extra}
+              aria-label={`Extra jurors, 0 to ${MAX_EXTRA_JURORS}, ${usd(EXTRA_JUROR_USD)} each`}
+              onChange={(e) => ctx.setExtraJurors(clampExtraJurors(e.target.value))}
+            />
+            <button
+              type="button"
+              className={styles.stepBtn}
+              aria-label="One more extra juror"
+              aria-controls={stepperId}
+              disabled={extra >= MAX_EXTRA_JURORS}
+              onClick={() => ctx.setExtraJurors(extra + 1)}
+            >
+              +
+            </button>
+            <span className={styles.small} aria-live="polite">
+              {usd(EXTRA_JUROR_USD)} each, up to {MAX_EXTRA_JURORS}
+              {extra > 0 ? ` · +${usd(extraUsd)}` : ""}. Codes and credits never change this part.
+            </span>
+          </div>
         </fieldset>
       ) : null}
 
+      <p className={styles.small}>
+        {wantsRetest
+          ? "Your updated page goes to a new jury, against a fresh rewrite. Use the same email as your Verdict."
+          : `Start with a Quick Read? Your ${usd(quickReadPrice)} counts toward a Verdict for ${UPGRADE_CREDIT_HOURS} hours, and it works with the first-Verdict code.`}
+      </p>
+
       <div className={styles.codeRow}>
-        {codeOpen ? (
-          <div className={styles.codeField}>
-            <label htmlFor={codeId}>Partner or referral code</label>
-            <Input
-              id={codeId}
-              value={codeDraft}
-              maxLength={40}
-              autoComplete="off"
-              aria-invalid={codeError ? true : undefined}
-              aria-describedby={`${codeId}-note`}
-              onChange={(e) => {
-                const v = e.target.value;
-                setCodeDraft(v);
-                if (!v.trim()) {
-                  setCodeError(null);
-                  ctx.setCode(null);
-                  return;
-                }
-                const c = normalizeCode(v);
-                setCodeError(c ? null : "Codes use letters, numbers, - and _ only.");
-                ctx.setCode(c);
-              }}
-            />
-            <p id={`${codeId}-note`} className={styles.small} aria-live="polite">
-              {codeError ?? "Tells us who sent you. It doesn't change the price."}
-            </p>
-          </div>
-        ) : (
-          <button type="button" className={styles.linkButton} onClick={openCode}>
-            Have a code?
-          </button>
-        )}
+        <CouponCodeField />
       </div>
     </div>
   );

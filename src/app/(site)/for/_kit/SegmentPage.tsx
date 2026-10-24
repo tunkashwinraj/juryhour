@@ -35,7 +35,7 @@ export type Segment = {
 
 export async function SegmentPage({ seg }: { seg: Segment }) {
   // Cached snapshot (same one PricingSection reads): the page stays in the static shell.
-  const { prices, offer } = await getPricingSnapshot();
+  const { prices } = await getPricingSnapshot();
   return (
     <main id="main">
       <PageHero
@@ -87,7 +87,7 @@ export async function SegmentPage({ seg }: { seg: Segment }) {
 
       {seg.extra}
 
-      <HeroPreview id="preview" variant="hero" prices={prices} offer={offer} />
+      <HeroPreview id="preview" variant="hero" prices={prices} />
 
       <Section id="pricing-intro" title={seg.pricingTitle}>
         <p className={kit.answer}>{seg.pricingAnswer}</p>

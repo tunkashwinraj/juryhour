@@ -10,7 +10,7 @@ export type CaseHeaderProps = {
   className?: string;
 };
 
-/** Case-file strip for reports: Case 0142 · Proof · 15 jurors · delivered 3h 40m. */
+/** Case-file strip for reports: Case 0142 · Verdict · 15 jurors · delivered 3h 40m. */
 export function CaseHeader({ caseNo, tier, jurors, delivered, className }: CaseHeaderProps) {
   const no = caseNo.replace(/^case\s*/i, "");
   const items = [`Case ${no}`, tier, `${jurors} ${jurors === 1 ? "juror" : "jurors"}`];

@@ -23,7 +23,8 @@ const decode = (html: string) =>
 describe("refund policy matches the code", () => {
   it("panel minimums and windows come from TIERS", () => {
     const rows = tierRefundRows();
-    for (const t of [...BUYABLE_TIERS, "specialist"] as const) {
+    expect(rows.map((r) => r.tier)).toEqual(["spark", "proof", "retest"]);
+    for (const t of BUYABLE_TIERS) {
       const row = rows.find((r) => r.tier === t)!;
       expect(row.minJurors).toBe(TIERS[t].minJurors);
       expect(row.jurors).toBe(TIERS[t].jurors);
@@ -36,13 +37,13 @@ describe("refund policy matches the code", () => {
   it("pro-rata example uses the production formula", () => {
     const ex = proRataExample();
     expect(ex.refund).toBe(proRataRefund(TIERS.proof.price, TIERS.proof.jurors, ex.approved));
-    expect(ex.refund).toBeCloseTo((149 * 3) / 15, 2); // $29.80
+    expect(ex.refund).toBeCloseTo((299 * 4) / 20, 2); // $59.80
     expect(ex.approved).toBeGreaterThanOrEqual(TIERS.proof.minJurors);
   });
 
   it("rendered page states minimums, grace, attempts, once-per-order and the formula", () => {
     const html = render(RefundsPage);
-    for (const t of [...BUYABLE_TIERS, "specialist"] as const) {
+    for (const t of BUYABLE_TIERS) {
       const row = new RegExp(`data-tier="${t}"[^]*?</tr>`).exec(html)?.[0] ?? "";
       expect(row).toContain(`>${TIERS[t].minJurors}<`);
       expect(row).toContain(`>${TIERS[t].jurors}<`);
@@ -51,8 +52,10 @@ describe("refund policy matches the code", () => {
     expect(text).toContain(`${PANEL_GRACE_HOURS} extra hour`);
     expect(text).toContain(`fails ${MAX_STAGE_ATTEMPTS} times`);
     expect(text).toContain("one refund on request per order");
-    expect(text).toContain(`more than ${TIERS.proof.deadlineHours * 2} hours for a Proof`);
-    expect(text).toContain("$29.80");
+    expect(text).toContain(`more than ${TIERS.proof.deadlineHours * 2} hours for a Verdict`);
+    expect(text).toContain("$59.80");
+    expect(text).toContain("extra jurors");
+    expect(text).not.toMatch(/Spark|Pulse|Proof|Launch Pack|Rush|Specialist/);
     expect(text).toContain("support@juryhour.com");
   });
 });
@@ -78,7 +81,9 @@ describe("legal pages", () => {
   it("terms list every banned category", () => {
     const html = render(TermsPage);
     for (const c of BANNED_CATEGORIES) expect(html).toContain(`data-category="${c}"`);
-    expect(html).toContain("[STATE]");
+    expect(html).toContain("governed by the laws of the State of New York, United States");
+    expect(html).not.toContain("[STATE]");
+    expect(html).toContain("Draft — pending founder review");
   });
 
   it("privacy names every processor, covers jurors, cookies, no sale and under-18s", () => {

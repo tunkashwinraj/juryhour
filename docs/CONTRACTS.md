@@ -18,6 +18,8 @@ Read with `SPEC.md` and `CLAUDE.md`. **Where this file and SPEC.md disagree, thi
 7. Domain `juryhour.com` is not wired yet. Always build absolute URLs from `env().NEXT_PUBLIC_APP_URL`; never hardcode the host.
 8. Missing keys (Terac, Turnstile, Whop webhook secrets, routine tokens) are expected right now. Every integration must: (a) work with mocks in tests, (b) fail with a clear `"<NAME> is not configured"` error at runtime via `need()`, (c) where noted, offer a dry-run path via `has()`.
 
+9. **Pricing v3 (2026-10).** Sold at `/api/checkout`: `spark` (Quick Read $11), `proof` (Verdict $299, 20 jurors, min 14, cap $80), `retest` ($59, 8 jurors, cap $32; needs a DELIVERED/PARTIAL `proof` parent of the same email + mode, delivered ≤ 30 days ago, one per parent). `extra_jurors` 0–20 at $7 (panel and cap grow pro rata; never discounted). Coupon HALF (`src/lib/coupons.ts`): 50% off the proof base, first paid Verdict per email + mode, until `COUPON_HALF_ENDS_AT`; combines with the Quick Read credit. Checkout refuses with 400: `tier_not_offered`, `addons_not_offered`, `extra_jurors_out_of_range`, `coupon_unknown`, `coupon_expired`, `coupon_not_applicable`, `coupon_already_used`, `margin_too_low` (30% at worst-case juror cost), `retest_needs_parent`, `retest_parent_not_eligible`, `retest_window_expired`, `retest_already_used`, `bad_parent`. `/api/quote` refuses new specialist quotes (`tier_not_offered`). Migration `0006_simplified_pricing.sql`.
+
 ## 1. Shared modules (lead-owned, import them, don't edit)
 
 | Module | Exports |

@@ -5,11 +5,9 @@
 //
 // Props B/D pass from the server (both optional, recommended wherever prices are shown):
 //   prices — Record<TierName, number|null> from getShellPrices()
-//   offer  — activeLaunchOffer(…) result (LaunchOffer | null); hidden client-side after endsAt
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Banner, Button, Field, Input, SegmentedControl, Textarea, segmentPanelId, segmentTabId } from "@/components/ui";
 import type { TierName } from "@/lib/constants";
-import type { LaunchOffer } from "@/lib/launch";
 import { getAttribution, track } from "@/lib/attribution";
 import { postJson } from "./client-api";
 import {
@@ -33,7 +31,6 @@ export type HeroPreviewProps = {
   /** "hero" = the main instance; "band" = a final-CTA quick input that hands off to the hero when present. */
   variant?: "hero" | "band";
   prices?: Partial<Record<TierName, number | null>>;
-  offer?: LaunchOffer | null;
 };
 
 type Phase = "quick" | "form" | "loading" | "result" | "skipped";
@@ -41,7 +38,7 @@ type Mode = "url" | "pitch";
 
 const SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || null;
 
-export function HeroPreview({ id = "preview", variant = "hero", prices, offer }: HeroPreviewProps) {
+export function HeroPreview({ id = "preview", variant = "hero", prices }: HeroPreviewProps) {
   const ctx = usePreview();
   const rootRef = useRef<HTMLDivElement>(null);
   const focusRef = useRef<string | null>(null);
@@ -282,7 +279,7 @@ export function HeroPreview({ id = "preview", variant = "hero", prices, offer }:
           <span className={styles.srOnly} aria-live="polite">
             {copied ? "Link copied to clipboard" : ""}
           </span>
-          <Upsell prices={prices} offer={offer} />
+          <Upsell prices={prices} />
         </div>
       );
   } else if (phase === "skipped") {
@@ -294,7 +291,7 @@ export function HeroPreview({ id = "preview", variant = "hero", prices, offer }:
         <Banner tone="info" role="alert">
           <p>{skipMessage}</p>
         </Banner>
-        <Upsell prices={prices} offer={offer} title="Skip the preview: have real people judge your page" />
+        <Upsell prices={prices} title="Skip the preview: have real people judge your page" />
         <button type="button" className={styles.linkButton} onClick={() => setPhase("form")}>
           Back to the form
         </button>

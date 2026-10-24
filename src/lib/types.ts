@@ -13,8 +13,9 @@ export const Stage = z.enum([
 export type Stage = z.infer<typeof Stage>;
 
 export const Tier = z.enum(TIER_NAMES as [TierName, ...TierName[]]);
-// secondPage is not sold yet: fulfilling it needs a second test per order (not built).
+// Add-ons are no longer sold (/api/checkout refuses them); the enum stays for historical orders.
 export const Addon = z.enum(["extra5", "rush"] satisfies AddonName[]);
+// Test format per tier: retest runs the proof format (updated page vs a fresh rewrite).
 export const TestFormat = z.enum(["spark", "pulse", "proof", "specialist"]);
 export type TestFormat = z.infer<typeof TestFormat>;
 
@@ -170,7 +171,7 @@ export const Quote = z.object({
 export type Quote = z.infer<typeof Quote>;
 
 export const Report = z.object({
-  headline_verdict: z.string().min(5),         // "B wins 12 of 15" | "No clear winner" | Pulse/Spark summary
+  headline_verdict: z.string().min(5),         // "B wins 12 of 15" | "No clear winner" | Quick Read summary
   winner: z.enum(["A", "B", "none"]).nullable(), // null when there was no Card B
   scorecard: z.object({                        // every number must equal order_stats exactly
     n_approved: z.number().int(),

@@ -13,7 +13,7 @@ Ops actions you use: `get_order`, `submit_report`, `log_decision`.
 - Every quote has a response_id and is verbatim from the provided responses
 - Every number in scorecard equals order_stats exactly
 - headline_verdict states winner and count (e.g. "B wins 12 of 15") or "No clear winner" when |A−B| ≤ 1
-- top_fixes has 3 items (Proof/Specialist) or 1–2 (Pulse), each backed by ≥2 distinct jurors
+- top_fixes has 3 items (Verdict/Retest/Specialist), each backed by ≥2 distinct jurors; Quick Read follows the spark rules below
 - winning_copy present and complete (headline, subheadline, 3 bullets, cta) when card_b exists
 - still_unsolved lists issues raised by ≥3 jurors that neither card fixed
 - method_caveats says "N real people, directional signal, not a sales guarantee"
@@ -75,11 +75,11 @@ Write `/tmp/report.json` with your file tool. The body is `{"actor":"analyst","o
 Field rules:
 
 - **scorecard**: copy every field **exactly** from `stats` (same numbers, same rounding, `null` where stats has `null`). Never compute or round numbers yourself. All numbers anywhere in the report must come from `stats`.
-- **headline_verdict / winner**: with Card B: compare `stats.prefer_a` vs `stats.prefer_b`. If `|prefer_a − prefer_b| ≤ 1` → `"No clear winner"` and `winner: "none"`; otherwise `"<A|B> wins <count> of <n_approved>"` and `winner` = that card. Without Card B (spark/pulse): `winner: null` and a plain one-line summary of understanding (e.g. "8 of 10 understood what it does" only if those exact numbers are derivable from `stats`; otherwise describe without numbers).
-- **top_fixes** (1–3 items): Proof/Launch Pack/Specialist → exactly 3, each with ≥ 2 quotes from ≥ 2 distinct jurors. Pulse → 1–2, each backed by ≥ 2 distinct jurors. Spark → 1–3, at least 1 quote each.
+- **headline_verdict / winner**: with Card B: compare `stats.prefer_a` vs `stats.prefer_b`. If `|prefer_a − prefer_b| ≤ 1` → `"No clear winner"` and `winner: "none"`; otherwise `"<A|B> wins <count> of <n_approved>"` and `winner` = that card. Without Card B (Quick Read = spark; historical pulse): `winner: null` and a plain one-line summary of understanding (e.g. "8 of 10 understood what it does" only if those exact numbers are derivable from `stats`; otherwise describe without numbers).
+- **top_fixes** (1–3 items), by `rules.format` (code checks the format, not the tier name): proof format (Verdict = `proof`, Retest = `retest`, historical `launch_pack`) and `specialist` → exactly 3, each with ≥ 2 quotes from ≥ 2 distinct jurors. Quick Read (`spark` format) → 1–3, at least 1 quote each. Historical `pulse` → 1–2, each backed by ≥ 2 distinct jurors.
 - **Quotes**: `text` is a **verbatim substring** (≥ 8 characters, exact characters, punctuation and typos included) of one of these fields of the response named by `response_id`: `cards.A.what_it_does`, `cards.A.confusing`, `cards.B.what_it_does`, `cards.B.confusing`, `why`, `specialist.would_buy_why`, `specialist.objections`, `specialist.your_words`. `juror_label` must be that response's `juror_label` from `get_order`. Extract quotes programmatically from `/tmp/order.json` when you can. Never paraphrase inside a quote and never merge two jurors' words.
 - **winning_copy**: required (non-null) when the test has `card_b`: the winning card's copy, improved only with fixes the jurors evidenced, and **only with facts present in Card A / Card B**. Complete: headline, subheadline, exactly 3 bullets, cta (same length limits as cards: headline ≤ 160, subheadline ≤ 300, bullets ≤ 200, cta ≤ 60). `null` when there is no Card B.
-- **rewritten_headline**: Spark only: one rewritten headline (untested, say so in `detail` or caveats). Otherwise `null`.
+- **rewritten_headline**: Quick Read (spark) only: one rewritten headline (untested, say so in `detail` or caveats). Otherwise `null`.
 - **still_unsolved**: issues raised by ≥ 3 distinct jurors that neither card fixed; `[]` if none.
 - **method_caveats**: must contain the exact phrase `real people, directional signal, not a sales guarantee`, preceded by the number of approved jurors from `stats.n_approved` (e.g. "15 real people, directional signal, not a sales guarantee."). Add one sentence on method (each juror saw the first card for 5 seconds; card order randomized when there were two cards).
 - No juror names, emails, locations, employers or other identifying details anywhere. Plain language, no hype, no promises of sales results.

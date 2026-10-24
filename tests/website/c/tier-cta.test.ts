@@ -12,7 +12,8 @@ function ctx(over: Partial<TierClickContext> = {}): TierClickContext {
     salesPaused: false,
     checkoutInput: { url: "https://example.com/", buyer_desc: "indie founders", email: "a@b.co" },
     previewId: PREVIEW_ID,
-    addons: [],
+    extraJurors: 0,
+    coupon: null,
     parentOrderId: null,
     code: null,
     ...over,
@@ -37,13 +38,15 @@ describe("performTierClick", () => {
 
   it("preview → POST /api/checkout with the contract body, then redirects", async () => {
     const d = deps({ status: 200, body: { ok: true, purchase_url: "https://sandbox.whop.com/checkout/abc", token: "t" } }, { src: "lovable", code: "LOVABLE" });
-    const r = await performTierClick("proof", ctx({ addons: ["extra5", "rush"], parentOrderId: PARENT_ID }), d);
+    const r = await performTierClick("proof", ctx({ extraJurors: 3, coupon: "HALF", parentOrderId: PARENT_ID }), d);
     expect(r).toEqual({ kind: "redirecting", url: "https://sandbox.whop.com/checkout/abc" });
     expect(d.post).toHaveBeenCalledWith(
       "/api/checkout",
       {
         tier: "proof",
-        addons: ["extra5", "rush"],
+        addons: [],
+        extra_jurors: 3,
+        coupon: "HALF",
         email: "a@b.co",
         buyer_desc: "indie founders",
         url: "https://example.com/",
@@ -72,14 +75,14 @@ describe("performTierClick", () => {
 
   it("sales paused (503 from checkout) → paused, no redirect", async () => {
     const d = deps({ status: 503, body: { ok: false, code: "sales_paused", error: "x" } });
-    const r = await performTierClick("pulse", ctx(), d);
+    const r = await performTierClick("spark", ctx(), d);
     expect(r.kind).toBe("paused");
     expect(d.assign).not.toHaveBeenCalled();
   });
 
-  it("specialist → POST /api/quote (no tier/addons/code) → token", async () => {
+  it("specialist → POST /api/quote (no tier/extra jurors/coupon/code) → token", async () => {
     const d = deps({ status: 200, body: { ok: true, token: "quote_tok" } }, { src: "x", code: "IGNORED" });
-    const r = await performTierClick("specialist", ctx({ addons: ["rush"] }), d);
+    const r = await performTierClick("specialist", ctx({ extraJurors: 5, coupon: "HALF" }), d);
     expect(r).toEqual({ kind: "quote", token: "quote_tok" });
     expect(d.post).toHaveBeenCalledWith("/api/quote", {
       email: "a@b.co",
@@ -101,6 +104,11 @@ describe("performTierClick", () => {
     const r = await performTierClick("proof", ctx({ checkoutInput: { pitch_text: "p".repeat(50), buyer_desc: "b", email: null } }), d);
     expect(r).toEqual({ kind: "need_email" });
     expect(d.post).not.toHaveBeenCalled();
+  });
+
+  it("a coupon refusal shows the server's reason", async () => {
+    const r = await performTierClick("proof", ctx({ coupon: "HALF" }), deps({ status: 400, body: { ok: false, code: "coupon_already_used", error: "HALF is for your first Verdict." } }));
+    expect(r).toEqual({ kind: "error", message: "HALF is for your first Verdict. Nothing was charged." });
   });
 
   it("bad_parent and 502 surface plain messages", async () => {

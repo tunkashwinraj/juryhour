@@ -3,7 +3,7 @@ import { InViewTrigger } from "./InViewTrigger";
 import { cx, tallyGroups } from "./lib";
 
 export type TallyProps = {
-  /** Number of marks (15 for a Proof jury). */
+  /** Number of marks (15 for a Verdict jury). */
   total: number;
   /** Marks filled for the winner. */
   filled: number;

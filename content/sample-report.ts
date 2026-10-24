@@ -17,7 +17,7 @@ export const SAMPLE_REPORT_SOURCE: "example" | "dogfood" = "example";
 /** Case header shown above the example (illustrative). */
 export const SAMPLE_CASE = {
   caseNo: "0142",
-  tier: "Proof",
+  tier: "Verdict",
   jurors: 15,
   delivered: "3h 40m",
   product: "Brieflane (a fictional product)",
@@ -239,6 +239,8 @@ export const SAMPLE_REPORT_DATA: ReportData & { report: Report } = {
   stage: "DELIVERED",
   pricePaid: null,
   paidAt: null,
+  deliveredAt: null,
+  retestUsed: false,
   refundUsd: 0,
   reportPublic: false,
   report: SAMPLE_REPORT,

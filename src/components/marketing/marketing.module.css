@@ -1,35 +1,6 @@
 /* Home-page layout (B). Visual primitives come from @/components/ui; this file only arranges them.
    Tokens are A's (src/styles/tokens.css); fallbacks keep the page legible if a token is renamed. */
 
-.offerBar {
-  background: var(--ink, #0e1a2e);
-  color: var(--on-ink, #f3f5f9);
-  font-size: 14px;
-  line-height: 1.4;
-}
-.offerBarInner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 8px 16px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  align-items: baseline;
-  justify-content: center;
-  text-align: center;
-}
-.offerBar strong {
-  font-weight: 600;
-}
-.offerBar a {
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.offerBar a:focus-visible {
-  outline: 2px solid var(--focus, currentColor);
-  outline-offset: 2px;
-}
 .mono {
   font-family: var(--font-mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace);
   font-variant-numeric: tabular-nums;

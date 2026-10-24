@@ -1,15 +1,7 @@
 // Refund-policy facts derived from the same constants and functions the code uses (SPEC §8,
 // src/lib/guardrails.ts, src/lib/orders/reconcile.ts, agents/support.md). Never hand-type these numbers.
-import { BUYABLE_TIERS, MAX_STAGE_ATTEMPTS, PANEL_GRACE_HOURS, TIERS, type TierName } from "@/lib/constants";
+import { BUYABLE_TIERS, MAX_STAGE_ATTEMPTS, PANEL_GRACE_HOURS, TIERS, TIER_LABELS, type TierName } from "@/lib/constants";
 import { proRataRefund } from "@/lib/guardrails";
-
-const TIER_LABEL: Record<TierName, string> = {
-  spark: "Spark",
-  pulse: "Pulse",
-  proof: "Proof",
-  launch_pack: "Launch Pack",
-  specialist: "Specialist",
-};
 
 export type TierRefundRow = {
   tier: TierName;
@@ -27,12 +19,12 @@ export const SUPPORT_REFUNDS_PER_ORDER = 1;
 export { MAX_STAGE_ATTEMPTS, PANEL_GRACE_HOURS };
 
 export function tierRefundRows(): TierRefundRow[] {
-  const tiers: TierName[] = [...BUYABLE_TIERS, "specialist"];
+  const tiers: TierName[] = [...BUYABLE_TIERS];
   return tiers.map((tier) => {
     const t = TIERS[tier];
     return {
       tier,
-      name: TIER_LABEL[tier],
+      name: TIER_LABELS[tier],
       jurors: t.jurors,
       minJurors: t.minJurors,
       deadlineHours: t.deadlineHours,
@@ -41,7 +33,7 @@ export function tierRefundRows(): TierRefundRow[] {
   });
 }
 
-/** Worked pro-rata example on the Proof tier, computed with the production formula. */
+/** Worked pro-rata example on the Verdict (proof) tier, computed with the production formula. */
 export function proRataExample() {
   const price = TIERS.proof.price;
   const requested = TIERS.proof.jurors;

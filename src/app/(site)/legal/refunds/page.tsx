@@ -82,8 +82,9 @@ function sections(): LegalSection[] {
             </table>
           </div>
           <p>
-            The delivery window starts when your payment clears. Rush halves it. If you added +5 jurors, your panel has 5 more
-            jurors; the minimum for delivery stays the same.
+            The delivery window starts when your payment clears. If you added extra jurors, your panel has that many more
+            jurors; the minimum for delivery stays the same. A Retest is its own order with its own panel, minimum and
+            refund rules, exactly like the table above.
           </p>
         </>
       ),
@@ -99,7 +100,7 @@ function sections(): LegalSection[] {
           </p>
           <p className={s.mono}>refund = price paid × (jurors requested − jurors delivered) ÷ jurors requested</p>
           <p>
-            Example: a {usd(ex.price)} Proof with {ex.requested} jurors requested that delivers {ex.approved} gets{" "}
+            Example: a {usd(ex.price)} Verdict with {ex.requested} jurors requested that delivers {ex.approved} gets{" "}
             <strong className={s.mono}>{usd(ex.refund)}</strong> back ({usd(ex.price)} × {ex.requested - ex.approved} ÷{" "}
             {ex.requested}). Only answers that pass our quality checks count as delivered.
           </p>
@@ -130,7 +131,7 @@ function sections(): LegalSection[] {
           <ul>
             <li>
               your verdict hasn&apos;t been delivered more than {LATE_MULTIPLIER}× its delivery window after you paid (for
-              example, more than {rows.find((r) => r.tier === "proof")?.lateAfterHours} hours for a Proof), or
+              example, more than {rows.find((r) => r.tier === "proof")?.lateAfterHours} hours for a Verdict), or
             </li>
             <li>your report failed or never arrived.</li>
           </ul>

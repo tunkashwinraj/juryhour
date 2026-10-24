@@ -1,6 +1,7 @@
 // All DB reads for Workstream A pages and routes. Server-only (service role via db()).
 // Callers inside React Server Components must be behind <Suspense> (Cache Components).
 import { cacheLife, cacheTag } from "next/cache";
+import { orderRefOrNull } from "@/lib/order-ref";
 import { refreshTag } from "@/lib/cache-tags";
 import { db, must } from "@/lib/db";
 import { BUYABLE_TIERS, TIERS, type TierName } from "@/lib/constants";
@@ -122,6 +123,14 @@ export type OrderStatus = {
   created_at: string;
 };
 
+/** Human order reference (JH-XXXXXXXX) for a status token, or null. Server-only (service role). */
+export async function getOrderRefByToken(token: string): Promise<string | null> {
+  if (!isValidToken(token)) return null;
+  const res = await db().from("orders").select("id").eq("token", token).maybeSingle();
+  if (res.error || !res.data) return null;
+  return orderRefOrNull((res.data as { id: string }).id);
+}
+
 /** Same semantics as the anon RPC get_order_by_token: safe projection only. */
 export async function getOrderStatus(token: string): Promise<OrderStatus | null> {
   if (!isValidToken(token)) return null;
@@ -165,6 +174,10 @@ export type ReportData = {
   stage: Stage;
   pricePaid: number | null;
   paidAt: string | null;
+  /** When the verdict was delivered (starts the Retest window). */
+  deliveredAt: string | null;
+  /** A paid Retest already names this order as its parent (one Retest per Verdict). */
+  retestUsed: boolean;
   refundUsd: number;
   reportPublic: boolean;
   report: Report | null; // null when not delivered yet or invalid
@@ -190,7 +203,7 @@ export async function getReportData(token: string): Promise<ReportData | null> {
   const order = must(
     await sb
       .from("orders")
-      .select("id, token, mode, tier, stage, price_usd, paid_at, refund_usd, report, report_public")
+      .select("id, token, mode, tier, stage, price_usd, paid_at, delivered_at, refund_usd, report, report_public")
       .eq("token", token)
       .maybeSingle(),
     "orders by token",
@@ -233,6 +246,17 @@ export async function getReportData(token: string): Promise<ReportData | null> {
 
   const parsed = order.report ? Report.safeParse(order.report) : null;
   const delivered = order.stage === "DELIVERED" || order.stage === "PARTIAL";
+  let retestUsed = false;
+  if (order.tier === "proof" && delivered) {
+    const used = await sb
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("parent_order_id", order.id)
+      .eq("tier", "retest")
+      .not("paid_at", "is", null);
+    if (used.error) throw new Error(`retest lookup: ${used.error.message}`);
+    retestUsed = (used.count ?? 0) > 0;
+  }
   return {
     orderId: order.id,
     token: order.token,
@@ -241,6 +265,8 @@ export async function getReportData(token: string): Promise<ReportData | null> {
     stage: order.stage,
     pricePaid: num(order.price_usd),
     paidAt: order.paid_at,
+    deliveredAt: order.delivered_at ?? null,
+    retestUsed,
     refundUsd: num(order.refund_usd) ?? 0,
     reportPublic: Boolean(order.report_public),
     report: delivered && parsed?.success ? parsed.data : null,

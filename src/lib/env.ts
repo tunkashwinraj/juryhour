@@ -56,6 +56,7 @@ const schema = z.object({
   LAUNCH_OFFER_TIER: z.enum(["spark", "pulse", "proof", "launch_pack"]).default("proof"),
   LAUNCH_OFFER_PRICE: z.coerce.number().positive().default(99),
   LAUNCH_OFFER_CODE: z.string().default("TODAY99"),
+  // Verdict coupon: COUPON_CODE / COUPON_PERCENT / COUPON_ENDS_AT are read (tolerantly) by src/lib/coupons.ts.
   NEXT_PUBLIC_SUPPORT_EMAIL: z.string().default("support@juryhour.com"),
   CANONICAL_HOST: optional,                       // e.g. juryhour.com — set only once its DNS resolves
 

@@ -34,7 +34,7 @@ export default function ContactPage() {
           <li>
             Refunds follow fixed rules, most of them automatic. See the <Link href="/legal/refunds">refund policy</Link>.
           </li>
-          <li>Agencies, bundles and white-label reports: tell us about the client page.</li>
+          <li>Agencies and white-label reports: tell us about the client page.</li>
           <li>Accessibility problems or a juror question: we want to hear about it.</li>
         </ul>
       </Section>

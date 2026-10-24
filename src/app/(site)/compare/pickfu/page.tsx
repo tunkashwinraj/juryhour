@@ -21,10 +21,10 @@ export default function ComparePickFuPage() {
       answer="PickFu is better for large consumer polls and visual variants; JuryHour is built for one job, finding out whether strangers get your page, and hands you tested copy."
       sources={["pickfu-pricing", "pickfu-home"]}
       rows={[
-        { label: "Audience", us: "Real people screened to match your buyer, via Terac; Specialist Jury for B2B roles", them: PICKFU.audience },
-        { label: "Price", us: `Fixed per test: Spark $${TIERS.spark.price} (${TIERS.spark.jurors} people) to Proof $${P.price} (${P.jurors} people), list`, them: PICKFU.price },
-        { label: "Turnaround", us: `Same day (Proof jury deadline ${P.deadlineHours} h)`, them: PICKFU.speed },
-        { label: "What's tested", us: "Your page's message as a 5-second card; in Proof, against a rewrite", them: PICKFU.tests },
+        { label: "Audience", us: "Real people screened to match your buyer, via Terac", them: PICKFU.audience },
+        { label: "Price", us: `Fixed per test: Quick Read $${TIERS.spark.price} (${TIERS.spark.jurors} people) to Verdict $${P.price} (${P.jurors} people)`, them: PICKFU.price },
+        { label: "Turnaround", us: `Same day (Verdict jury deadline ${P.deadlineHours} h)`, them: PICKFU.speed },
+        { label: "What's tested", us: "Your page's message as a 5-second card; in Verdict, against a rewrite", them: PICKFU.tests },
         { label: "Writes copy for you", us: "Yes: a challenger from facts on your page, and the winning copy", them: PICKFU.rewrite },
         { label: "Setup", us: "Paste a URL or pitch; the agent writes the test", them: "You write the poll question and upload the options" },
       ]}

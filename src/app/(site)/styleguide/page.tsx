@@ -190,7 +190,7 @@ export default function StyleguidePage() {
               ))}
               <div className={s.scaleRow}>
                 <dt>mono</dt>
-                <dd style={{ fontFamily: "var(--font-mono)" }}>Juror 06 · Case 0142 · $149 · 13/15</dd>
+                <dd style={{ fontFamily: "var(--font-mono)" }}>Juror 06 · Case 0142 · $299 · 17/20</dd>
               </div>
             </dl>
           </section>
@@ -200,7 +200,7 @@ export default function StyleguidePage() {
             <div className={s.stack} style={{ gap: "var(--space-4)" }}>
               <div className={s.row}>
                 <Button size="lg">Get free preview</Button>
-                <Button>Buy Proof</Button>
+                <Button>Buy Verdict</Button>
                 <Button size="sm">Small</Button>
                 <Button disabled>Disabled</Button>
               </div>
@@ -295,7 +295,7 @@ export default function StyleguidePage() {
           <section className={s.block} aria-labelledby="sg-verdict">
             <h2 id="sg-verdict">Case header, stamp, quotes, scorecard</h2>
             <Card tone="raised" style={{ maxWidth: 640 }}>
-              <CaseHeader caseNo="0142" tier="Proof" jurors={15} delivered="3h 40m" />
+              <CaseHeader caseNo="0142" tier="Verdict" jurors={15} delivered="3h 40m" />
               <Eyebrow>Example verdict</Eyebrow>
               <div className={s.row} style={{ justifyContent: "space-between", marginBottom: "var(--space-5)" }}>
                 <Tally total={15} filled={12} label="12 of 15 jurors chose B" />
@@ -326,41 +326,28 @@ export default function StyleguidePage() {
             <h2 id="sg-price">Price cards</h2>
             <div className={s.prices}>
               <PriceCard
-                name="Spark"
+                name="Quick Read"
                 price={11}
                 jurors={3}
                 summary="A 2-minute first impression of your headline."
                 bullets={["AI critique", "1 rewritten headline (untested)", "Same day"]}
                 cta={
                   <Button variant="secondary" full>
-                    Start with Spark
+                    Start with Quick Read
                   </Button>
                 }
               />
               <PriceCard
-                name="Proof"
-                price={99}
-                compareAt={149}
-                jurors={15}
+                name="Verdict"
+                price={299}
+                priceSuffix="launch offer · regular $499 from Dec 1"
+                jurors={20}
                 emphasized
                 badge={<Badge tone="verdict">Recommended</Badge>}
                 summary="Your page vs our rewrite, in random order."
                 bullets={["Verdict and scorecard", "Top fixes in jurors' words", "Winning copy to paste", "Same day"]}
-                cta={<Button full>Get Proof</Button>}
-                footnote="Launch price until 6:00pm ET today."
-              />
-              <PriceCard
-                name="Specialist Jury"
-                price={499}
-                priceNote="from"
-                jurors={8}
-                summary="Verified professionals who match your buyer."
-                bullets={["Job, industry and seniority match", "Buyer objections and price reaction", "24–72 h"]}
-                cta={
-                  <Button variant="secondary" full>
-                    Get a quote
-                  </Button>
-                }
+                cta={<Button full>Get Verdict</Button>}
+                footnote="Your $11 Quick Read counts toward it for 24 hours."
               />
             </div>
           </section>
@@ -391,7 +378,7 @@ export default function StyleguidePage() {
                   aText: "Real people recruited and identity-verified through Terac who match the buyer you describe.",
                 },
                 {
-                  q: "Is 15 people enough?",
+                  q: "Is 20 people enough?",
                   a: <p>It&rsquo;s a directional signal, not a scientific study.</p>,
                   aText: "It's a directional signal, not a scientific study.",
                 },
@@ -404,7 +391,7 @@ export default function StyleguidePage() {
             <div className={s.stack} style={{ gap: "var(--space-3)" }}>
               <Banner>Example report. Names and numbers are illustrative.</Banner>
               <Banner tone="warn">We&rsquo;re at capacity today. Join the waitlist and we&rsquo;ll email you.</Banner>
-              <Banner tone="verdict">Launch price: Proof $99 (normally $149) until 6:00pm ET today.</Banner>
+              <Banner tone="verdict">Verdict delivered: the challenger wins 12 of 15.</Banner>
             </div>
           </section>
 
