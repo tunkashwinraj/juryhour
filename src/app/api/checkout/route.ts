@@ -8,6 +8,7 @@ import { pickSrc } from "@/lib/analytics";
 import { BUYABLE_TIERS, type TierName } from "@/lib/constants";
 import { db, logEvent, openIncident } from "@/lib/db";
 import { env } from "@/lib/env";
+import { applyLaunchOffer } from "@/lib/launch";
 import { checkoutTitle, computePrice, type ParentOrderForCredit } from "@/lib/pricing";
 import { Addon } from "@/lib/types";
 import { createCheckout } from "@/lib/whop";
@@ -30,6 +31,9 @@ const Body = OrderInputBase.extend({
   tier: z.enum(BUYABLE_TIERS),
   addons: z.array(Addon).max(3).default([]),
   parent_order_id: z.preprocess((v) => (v === "" || v === null ? undefined : v), z.string().uuid().optional()),
+  // Promo / partner code from ?code= or the "Have a code?" field. Stored for attribution; the only
+  // price effect today is the launch offer, which applies by time, not by code.
+  code: z.preprocess((v) => (v === "" || v === null ? undefined : v), z.string().trim().max(40).regex(/^[A-Za-z0-9_-]+$/).optional()),
 }).refine(exactlyOneTarget, exactlyOneTargetMsg);
 
 type ParentRow = { id: string; tier: TierName; price_usd: number | string | null; paid_at: string | null; email: string; mode: string };
@@ -86,7 +90,7 @@ export async function POST(req: NextRequest) {
       parent = p.parent;
     }
 
-    const prices = await loadPrices();
+    const prices = applyLaunchOffer(await loadPrices());
     const quote = computePrice({ tier: b.tier, addons: b.addons, parentOrder: parent, prices });
     const addons = [...new Set(b.addons)];
     const token = newOrderToken();
@@ -109,6 +113,7 @@ export async function POST(req: NextRequest) {
         preview_id: previewId,
         parent_order_id: b.parent_order_id ?? null,
         retest_available: b.tier === "launch_pack",
+        promo_code: b.code ? b.code.toUpperCase() : null,
         deadline_at: null,
       })
       .select("id")

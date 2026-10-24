@@ -51,6 +51,14 @@ const schema = z.object({
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: optional,
   TURNSTILE_SECRET: optional,
 
+  // Website (docs/WEBSITE_SPEC.md)
+  LAUNCH_OFFER_ENDS_AT: optional,                 // ISO time; unset = no offer
+  LAUNCH_OFFER_TIER: z.enum(["spark", "pulse", "proof", "launch_pack"]).default("proof"),
+  LAUNCH_OFFER_PRICE: z.coerce.number().positive().default(99),
+  LAUNCH_OFFER_CODE: z.string().default("TODAY99"),
+  NEXT_PUBLIC_SUPPORT_EMAIL: z.string().default("support@juryhour.com"),
+  CANONICAL_HOST: optional,                       // e.g. juryhour.com — set only once its DNS resolves
+
   X_API_KEY: optional,
   X_API_SECRET: optional,
   X_ACCESS_TOKEN: optional,
