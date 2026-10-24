@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "build-with-exa": {
+      "source": "exa-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/build-with-exa/SKILL.md",
+      "computedHash": "1936136fd25077131b315733da824d00c0ee6af6db376d9dd6f3352faa5a979f"
+    }
+  }
+}
