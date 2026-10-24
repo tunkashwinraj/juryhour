@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkoutTitle,
+  WHOP_TITLE_MAX,
   computePrice,
   isBuyableTier,
   MIN_CHECKOUT_USD,
@@ -318,15 +319,17 @@ describe("guardrails for the v3 tiers", () => {
 });
 
 describe("checkoutTitle", () => {
-  it("names the tier by its customer-facing label, with extras and coupon", () => {
+  it("names the tier by its customer-facing label and stays within Whop's 30-character limit", () => {
     expect(checkoutTitle("proof")).toBe("JuryHour Verdict");
     expect(checkoutTitle("spark")).toBe("JuryHour Quick Read");
     expect(checkoutTitle("retest")).toBe("JuryHour Retest");
-    expect(checkoutTitle("proof", { creditUsd: 11 })).toBe("JuryHour Verdict (upgrade credit applied)");
-    expect(checkoutTitle("proof", { extraJurors: 5, couponCode: "HALF" })).toBe("JuryHour Verdict + 5 extra jurors (HALF)");
-    expect(checkoutTitle("spark", { extraJurors: 1 })).toBe("JuryHour Quick Read + 1 extra juror");
-    expect(checkoutTitle("proof", { couponCode: "HALF", creditUsd: 11, orderRef: "JH-F9DA6201" })).toBe(
-      "JuryHour Verdict (HALF, upgrade credit applied) · JH-F9DA6201",
-    );
+    expect(checkoutTitle("proof", { extraJurors: 5, couponCode: "HALF" })).toBe("JuryHour Verdict +5");
+    expect(checkoutTitle("proof", { couponCode: "HALF", creditUsd: 11, orderRef: "JH-F9DA6201" })).toBe("Verdict · JH-F9DA6201");
+    expect(checkoutTitle("spark", { extraJurors: 20, orderRef: "JH-F9DA6201" })).toBe("Quick Read +20 · JH-F9DA6201");
+    for (const tier of ["spark", "proof", "retest"] as const) {
+      for (const extraJurors of [0, 1, 20]) {
+        expect(checkoutTitle(tier, { extraJurors, couponCode: "HALF", creditUsd: 11, orderRef: "JH-ABCDEF12" }).length).toBeLessThanOrEqual(WHOP_TITLE_MAX);
+      }
+    }
   });
 });

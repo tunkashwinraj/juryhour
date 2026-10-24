@@ -211,14 +211,18 @@ export function retestRefusal(i: {
   return null;
 }
 
-/** Human title for the Whop checkout line ("JuryHour Verdict + 5 extra jurors (HALF) · JH-F9DA6201"). */
+/** Whop rejects plan titles longer than this ("Title is too long (maximum is 30 characters)"). */
+export const WHOP_TITLE_MAX = 30;
+
+/**
+ * Whop checkout title, e.g. "Verdict +5 · JH-F9DA6201" (always ≤ 30 chars). Coupon and credit
+ * details are not repeated: Whop already shows the price being charged.
+ */
 export function checkoutTitle(
   tier: TierName,
   o: { creditUsd?: number; extraJurors?: number; couponCode?: string | null; orderRef?: string | null } = {},
 ): string {
-  let title = `JuryHour ${PUBLIC_TIER_LABELS[tier]}`;
-  if (o.extraJurors) title += ` + ${o.extraJurors} extra ${o.extraJurors === 1 ? "juror" : "jurors"}`;
-  const notes = [o.couponCode, o.creditUsd && o.creditUsd > 0 ? "upgrade credit applied" : null].filter(Boolean);
-  if (notes.length) title += ` (${notes.join(", ")})`;
-  return o.orderRef ? `${title} · ${o.orderRef}` : title;
+  const base = `${PUBLIC_TIER_LABELS[tier]}${o.extraJurors ? ` +${o.extraJurors}` : ""}`;
+  const withRef = o.orderRef ? `${base} · ${o.orderRef}` : `JuryHour ${base}`;
+  return (withRef.length <= WHOP_TITLE_MAX ? withRef : base).slice(0, WHOP_TITLE_MAX);
 }

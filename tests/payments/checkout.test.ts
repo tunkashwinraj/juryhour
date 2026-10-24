@@ -185,7 +185,7 @@ describe("POST /api/checkout — retest", () => {
       parent_order_id: PARENT_ID,
       retest_available: false,
     });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 59, title: "JuryHour Retest · JH-33333333" });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 59, title: "Retest · JH-33333333" });
     expect(h.logEvent).toHaveBeenCalledWith(
       expect.objectContaining({ action: "checkout_created", reasoning: `retest of ${PARENT_ID}`, payload: expect.objectContaining({ tier: "retest", credit_usd: 0 }) }),
     );
@@ -280,7 +280,7 @@ describe("POST /api/checkout — coupon HALF", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ ok: true, price_usd: 149, coupon_applied: "HALF", credit_usd: 0 });
     expect(inserted()).toMatchObject({ tier: "proof", price_usd: 149, promo_code: "HALF" });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 149, title: "JuryHour Verdict (HALF) · JH-33333333" });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 149, title: "Verdict · JH-33333333" });
     // first-Verdict check: paid proof orders for this email + mode
     const q = firstVerdictLookup()!;
     expect([filterValue(q, "email"), filterValue(q, "mode"), filterValue(q, "tier")]).toEqual(["founder@example.com", "sandbox", "proof"]);
@@ -342,7 +342,7 @@ describe("POST /api/checkout — coupon HALF", () => {
     at("2026-11-10T12:00:00Z");
     await post(checkout, { ...VALID, coupon: "HALF", extra_jurors: 10 });
     expect(inserted()).toMatchObject({ price_usd: 219, extra_jurors: 10 });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 219, title: "JuryHour Verdict + 10 extra jurors (HALF) · JH-33333333" });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 219, title: "Verdict +10 · JH-33333333" });
   });
 
   it("HALF + Quick Read credit = $138 (and + 20 extra jurors = $278, margin still ≥ 30%)", async () => {
@@ -455,7 +455,7 @@ describe("POST /api/checkout — business rules", () => {
     expect(h.createCheckout).toHaveBeenCalledWith({
       orderId: ORDER_ID,
       amountUsd: 299,
-      title: "JuryHour Verdict · JH-33333333",
+      title: "Verdict · JH-33333333",
       mode: "sandbox",
       redirectUrl: `https://juryhour.test/o/${body.token}?paid=1`,
     });
@@ -504,7 +504,7 @@ describe("POST /api/checkout — business rules", () => {
     state.parent = { id: PARENT_ID, tier: "spark", price_usd: "11.00", paid_at: new Date(Date.now() - 3600_000).toISOString(), email: "founder@example.com", mode: "sandbox" };
     await post(checkout, { ...VALID, parent_order_id: PARENT_ID });
     expect(inserted()).toMatchObject({ price_usd: 288, parent_order_id: PARENT_ID });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 288, title: "JuryHour Verdict (upgrade credit applied) · JH-33333333" });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 288, title: "Verdict · JH-33333333" });
   });
 
   it("no second credit when the parent was already used by a paid order", async () => {
