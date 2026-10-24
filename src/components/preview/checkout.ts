@@ -17,7 +17,7 @@ export type TierClickContext = {
   checkoutInput: (Omit<CheckoutInput, "email"> & { email: string | null }) | null;
   /** id of a non-refused preview, if any */
   previewId: string | null;
-  /** Extra jurors (0–15) chosen in the checkout step. */
+  /** Extra jurors (0–20) chosen in the checkout step. */
   extraJurors: number;
   /** Coupon code to apply to this tier (null when none applies). */
   coupon: string | null;

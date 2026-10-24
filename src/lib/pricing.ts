@@ -1,6 +1,7 @@
 // Checkout pricing (SPEC §1, §8; pricing simplification 2026-10). Pure: no I/O, no clock unless `now` is omitted.
 import {
   BUYABLE_TIERS,
+  EXTRA_JUROR_COST_CAP_USD,
   EXTRA_JUROR_USD,
   MARGIN_FLOOR,
   MAX_EXTRA_JURORS,
@@ -12,7 +13,7 @@ import {
   type AddonName,
   type TierName,
 } from "./constants";
-import { couponPrice, type Coupon } from "./coupons";
+import { bestVerdictDiscount, couponPrice, type Coupon, type VerdictDiscountKind } from "./coupons";
 import { marginOk } from "./guardrails";
 
 /** Smallest amount we ever send to checkout after upgrade credit. */
@@ -29,15 +30,19 @@ const CREDIT_TARGETS: readonly TierName[] = ["proof"];
 export type ParentOrderForCredit = { tier: TierName; price_usd: number; paid_at: string | null };
 
 export type PriceQuote = {
-  priceUsd: number;        // what the buyer pays now: base (after coupon, then credit) + extra jurors
+  priceUsd: number;        // what the buyer pays now: base (after the one discount) + extra jurors
   listUsd: number;         // tier base price before any discount (prices table, constant fallback)
-  discountUsd: number;     // coupon discount on the base price
-  couponCode: string | null;
-  creditUsd: number;       // upgrade credit actually applied (combines with a coupon)
+  discountUsd: number;     // coupon discount on the base price (0 when the credit won)
+  couponCode: string | null; // the coupon actually applied (null when the credit won or none)
+  creditUsd: number;       // upgrade credit actually applied (0 when the coupon won)
+  /** Which single discount was applied: they never stack (the larger saving wins, ties → coupon). */
+  discountApplied: VerdictDiscountKind;
+  /** The other discount that was available but not used (they don't stack), and what it was worth. */
+  skippedDiscount: { kind: "coupon" | "credit"; code: string | null; usd: number } | null;
   extraJurors: number;
   extraJurorsUsd: number;  // EXTRA_JUROR_USD × extraJurors (never discounted)
   jurors: number;          // panel size target: tier jurors + extra jurors
-  jurorCostCap: number;    // max Terac spend: tier cap pro rata to the panel size
+  jurorCostCap: number;    // max Terac spend: tier cap + EXTRA_JUROR_COST_CAP_USD × extra jurors
 };
 
 export type PricingErrorCode =
@@ -64,10 +69,10 @@ export function isBuyableTier(tier: string): tier is (typeof BUYABLE_TIERS)[numb
 /** Customer-facing list of what checkout sells, for refusal messages. */
 export const BUYABLE_TIERS_TEXT = BUYABLE_TIERS.map((t) => `${TIER_LABELS[t]} (${t})`).join(", ");
 
-/** Juror cost cap for a panel of `jurors` people: the tier cap pro rata (cap / tier jurors × jurors). */
-export function proRataCap(tier: TierName, jurors: number): number {
+/** Juror cost cap for an order: the tier cap + EXTRA_JUROR_COST_CAP_USD ($10.50) per paid extra juror. */
+export function panelCostCap(tier: TierName, extraJurors: number): number {
   const t = TIERS[tier];
-  return t.jurorCostCap === null ? 0 : cents((t.jurorCostCap * jurors) / t.jurors);
+  return t.jurorCostCap === null ? 0 : cents(t.jurorCostCap + EXTRA_JUROR_COST_CAP_USD * Math.max(0, extraJurors));
 }
 
 /**
@@ -75,15 +80,16 @@ export function proRataCap(tier: TierName, jurors: number): number {
  * - base: `prices[tier]` (current_usd from the `prices` table, CEO-adjustable within band);
  *   falls back to TIERS[tier].price when the row is missing.
  * - coupon (validated by the caller with checkCoupon): only on its tier's base price, whole dollars
- *   rounded down. One coupon per order.
+ *   rounded down.
  * - upgrade credit: target tier in CREDIT_TARGETS (Verdict), parent ranks below it and was paid within
- *   UPGRADE_CREDIT_HOURS → credit = parent price, taken off the (couponed) base, never below
- *   MIN_CHECKOUT_USD. The credit combines with HALF: $299 → $149 − $11 = $138.
- * - extra jurors: 0–MAX_EXTRA_JURORS at EXTRA_JUROR_USD each, added after any discount; the panel and
- *   its juror cost cap grow pro rata.
+ *   UPGRADE_CREDIT_HOURS → credit = parent price, never taking the base below MIN_CHECKOUT_USD.
+ * - one discount per order: coupon and credit never stack. When both could apply, only the larger
+ *   saving is applied (bestVerdictDiscount): LAUNCH20 $299 → $239 ($60 off) beats the $49 credit ($250).
+ * - extra jurors: 0–MAX_EXTRA_JURORS at EXTRA_JUROR_USD each, added after any discount; the panel grows
+ *   by that many and its juror cost cap by EXTRA_JUROR_COST_CAP_USD each.
  * - legacy add-ons (extra5/rush) → PricingError("addons_not_offered").
  * - margin: refuses (margin_too_low) when the price can't keep MARGIN_FLOOR at the worst-case juror
- *   cost (the full pro-rata cap) plus the Whop fee. Launch re-checks against the real cost.
+ *   cost (the full juror cost cap) plus the Whop fee. Launch re-checks against the real cost.
  */
 export function computePrice(i: {
   tier: TierName;
@@ -114,8 +120,6 @@ export function computePrice(i: {
   const now = i.now ?? new Date();
 
   const coupon = i.coupon && i.coupon.tier === i.tier ? i.coupon : null;
-  const discounted = coupon ? Math.min(listUsd, couponPrice(listUsd, coupon.percentOff)) : listUsd;
-  const discountUsd = cents(listUsd - discounted);
 
   let credit = 0;
   const p = i.parentOrder;
@@ -127,16 +131,18 @@ export function computePrice(i: {
     const paidAt = new Date(p.paid_at).getTime();
     const ageMs = now.getTime() - paidAt;
     if (Number.isFinite(paidAt) && ageMs >= 0 && ageMs <= UPGRADE_CREDIT_HOURS * 3600_000) {
-      credit = Math.min(parentPrice, Math.max(0, discounted - MIN_CHECKOUT_USD));
+      credit = Math.min(parentPrice, Math.max(0, listUsd - MIN_CHECKOUT_USD));
     }
   }
-  const creditUsd = cents(credit);
-  const base = cents(discounted - creditUsd);
+  const best = bestVerdictDiscount({ listUsd, coupon, creditUsd: cents(credit) });
+  const discountUsd = best.couponUsd;
+  const creditUsd = best.creditUsd;
+  const base = best.baseUsd;
 
   const extraJurorsUsd = cents(EXTRA_JUROR_USD * extra);
   const priceUsd = cents(base + extraJurorsUsd);
   const jurors = t.jurors + extra;
-  const jurorCostCap = proRataCap(i.tier, jurors);
+  const jurorCostCap = panelCostCap(i.tier, extra);
 
   if (!marginOk(priceUsd, jurorCostCap / jurors, jurors)) {
     throw new PricingError(
@@ -148,13 +154,41 @@ export function computePrice(i: {
     priceUsd,
     listUsd,
     discountUsd,
-    couponCode: coupon ? coupon.code : null,
+    couponCode: best.kind === "coupon" && coupon ? coupon.code : null,
     creditUsd,
+    discountApplied: best.kind,
+    skippedDiscount:
+      best.kind === "credit" && coupon
+        ? { kind: "coupon", code: coupon.code, usd: cents(listUsd - couponPriceOf(listUsd, coupon)) }
+        : best.kind === "coupon" && credit > 0
+          ? { kind: "credit", code: null, usd: cents(credit) }
+          : null,
     extraJurors: extra,
     extraJurorsUsd,
     jurors,
     jurorCostCap,
   };
+}
+
+const couponPriceOf = (list: number, c: Coupon) => Math.min(list, couponPrice(list, c.percentOff));
+
+/**
+ * Plain-English line for the checkout response/UI saying which discount was applied, or null when
+ * there was nothing to choose between. E.g. "LAUNCH20 applied ($60 off). It doesn't combine with your
+ * Quick Read credit ($49), so we used the bigger saving."
+ */
+export function discountNote(q: Pick<PriceQuote, "discountApplied" | "couponCode" | "discountUsd" | "creditUsd" | "skippedDiscount">): string | null {
+  const money = (n: number) => `$${Number.isInteger(n) ? n : n.toFixed(2)}`;
+  const s = q.skippedDiscount;
+  if (q.discountApplied === "coupon" && s?.kind === "credit") {
+    return `${q.couponCode} applied (${money(q.discountUsd)} off). It doesn't combine with your Quick Read credit (${money(s.usd)}), so we used the bigger saving.`;
+  }
+  if (q.discountApplied === "credit" && s?.kind === "coupon") {
+    return `Your Quick Read credit applied (${money(q.creditUsd)} off). It doesn't combine with ${s.code} (${money(s.usd)} off), so we used the bigger saving.`;
+  }
+  if (q.discountApplied === "coupon") return `${q.couponCode} applied (${money(q.discountUsd)} off).`;
+  if (q.discountApplied === "credit") return `Your Quick Read credit applied (${money(q.creditUsd)} off).`;
+  return null;
 }
 
 // ---------------------------------------------------------------- retest eligibility

@@ -61,25 +61,25 @@ describe("email templates", () => {
 
   it("preview_followup_1: count comes from vars, generic without it", () => {
     expect(renderEmail("preview_followup_1", { preview_id: "p", weak_spots: 2 }, ctx).subject).toBe(
-      "2 weak spots found — real humans can confirm for $11",
+      "2 weak spots found — real humans can confirm for $49",
     );
     expect(renderEmail("preview_followup_1", { preview_id: "p", weak_spots: 1 }, ctx).subject).toMatch(/^1 weak spot found/);
     const generic = renderEmail("preview_followup_1", { preview_id: "p" }, ctx).subject;
     expect(generic).not.toMatch(/\d+ weak/);
-    expect(generic).toContain("$11");
+    expect(generic).toContain("$49");
   });
 
-  it("preview_followup_2 pitches the Verdict at the constant price, with HALF while it runs", () => {
+  it("preview_followup_2 pitches the Verdict at the constant price, with LAUNCH20 while it runs", () => {
     vi.useFakeTimers({ now: new Date("2026-11-10T12:00:00Z"), toFake: ["Date"] });
     try {
       const out = renderEmail("preview_followup_2", { preview_id: "p" }, ctx);
       expect(out.text).toContain("Verdict ($299 launch offer)");
-      expect(out.text).toContain("20 real people");
-      expect(out.text).toContain("Your first Verdict is $149 with code HALF through Nov 30");
-      expect(out.text).toContain("code=HALF");
+      expect(out.text).toContain("15 real people");
+      expect(out.text).toContain("20% off your first Verdict with code LAUNCH20 until Nov 30 → $239");
+      expect(out.text).toContain("code=LAUNCH20");
       vi.setSystemTime(new Date("2026-12-02T00:00:00Z"));
       const later = renderEmail("preview_followup_2", { preview_id: "p" }, ctx);
-      expect(later.text).not.toContain("HALF");
+      expect(later.text).not.toContain("LAUNCH20");
       for (const o of [out, later]) expect(`${o.subject} ${o.text}`).not.toMatch(/Spark|Pulse|Proof|Launch Pack|Specialist/);
     } finally {
       vi.useRealTimers();
@@ -88,7 +88,7 @@ describe("email templates", () => {
 
   it("preview_followup_1 names the Quick Read", () => {
     const out = renderEmail("preview_followup_1", { preview_id: "p" }, ctx);
-    expect(out.text).toContain("Get a Quick Read for $11");
+    expect(out.text).toContain("Get a Quick Read for $49");
     expect(`${out.subject} ${out.text}`).not.toMatch(/Spark|Pulse|Proof/);
   });
 

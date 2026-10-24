@@ -1,8 +1,17 @@
 // Every FAQ on the site, grouped for /faq. Segment pages pick items by id.
-// Rules: answer in the first sentence, no invented numbers, no promised discounts, prices live on
-// /pricing (they can move, so FAQ text doesn't quote them). `aText` is the plain-text answer used
-// for FAQPage JSON-LD; here `a` is plain text too, so they are the same string.
-import { EXTRA_JUROR_USD, MAX_EXTRA_JURORS, TIERS, UPGRADE_CREDIT_HOURS } from "@/lib/constants";
+// Rules: answer in the first sentence, no invented numbers, no promised discounts. Prices come from the
+// constants and the coupon config (the same values checkout uses); /pricing shows the live prices.
+// `aText` is the plain-text answer used for FAQPage JSON-LD; here `a` is plain text too, so they are the
+// same string.
+import {
+  EXTRA_JUROR_USD,
+  MAX_EXTRA_JURORS,
+  TIERS,
+  UPGRADE_CREDIT_HOURS,
+  VERDICT_REGULAR_FROM,
+  VERDICT_REGULAR_USD,
+} from "@/lib/constants";
+import { LAUNCH20_DEFAULT, couponEndsLabel, couponPrice } from "@/lib/coupons";
 
 export type FaqItem = { id: string; q: string; a: string; aText: string };
 export type FaqGroup = { id: string; title: string; items: FaqItem[] };
@@ -11,6 +20,8 @@ const item = (id: string, q: string, a: string): FaqItem => ({ id, q, a, aText: 
 
 const P = TIERS.proof;
 const S = TIERS.spark;
+const C = LAUNCH20_DEFAULT;
+const C_LINE = `${C.percentOff}% off your first Verdict with code ${C.code} until ${couponEndsLabel(C.endsAt)} → $${couponPrice(P.price, C.percentOff)}`;
 
 export const FAQ_GROUPS: FaqGroup[] = [
   {
@@ -118,17 +129,17 @@ export const FAQ_GROUPS: FaqGroup[] = [
       item(
         "tiers",
         "Which package should I buy?",
-        `Quick Read (${S.jurors} people) is a quick first impression of your headline. Verdict (${P.jurors} people) tests your page against our rewrite and tells you which wins; it's the one we recommend. You can add up to ${MAX_EXTRA_JURORS} extra jurors at $${EXTRA_JUROR_USD} each to a Quick Read or Verdict. Current prices are on /pricing.`,
+        `Quick Read ($${S.price}, ${S.jurors} people) is a quick first impression of your headline. Verdict ($${P.price} launch offer · regular $${VERDICT_REGULAR_USD} from ${VERDICT_REGULAR_FROM}, ${P.jurors} people) tests your page against our rewrite and tells you which wins; it's the one we recommend. You can add up to ${MAX_EXTRA_JURORS} extra jurors at $${EXTRA_JUROR_USD} each to a Quick Read or Verdict. Current prices are on /pricing.`,
       ),
       item(
         "upgrade",
         "Does my Quick Read count toward a Verdict?",
-        `Yes. If you upgrade to a Verdict within ${UPGRADE_CREDIT_HOURS} hours, what you paid for the Quick Read is credited. Use the upgrade link in your Quick Read report.`,
+        `Yes. If you upgrade to a Verdict within ${UPGRADE_CREDIT_HOURS} hours, what you paid for the Quick Read is credited ($${P.price} − $${S.price} = $${P.price - S.price}). Use the upgrade link in your Quick Read report. The credit doesn't combine with a discount code: checkout applies whichever saves you more.`,
       ),
       item(
         "codes",
         "Do promo codes give a discount?",
-        "Partner codes like the ones in our links only tell us who sent you and don't change the price. The one discount code is the Verdict launch code shown on /pricing while it runs; it applies to the Verdict price only and doesn't combine with other discounts.",
+        `Partner codes like the ones in our links only tell us who sent you and don't change the price. The one discount code is ${C.code}: ${C_LINE}. It applies to the Verdict price only and doesn't combine with other discounts, including the Quick Read upgrade credit (checkout applies whichever saves you more).`,
       ),
       item(
         "refunds",

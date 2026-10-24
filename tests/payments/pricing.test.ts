@@ -3,15 +3,17 @@ import {
   checkoutTitle,
   WHOP_TITLE_MAX,
   computePrice,
+  discountNote,
   isBuyableTier,
   MIN_CHECKOUT_USD,
+  panelCostCap,
   PricingError,
-  proRataCap,
   retestRefusal,
   type RetestParent,
 } from "@/lib/pricing";
 import {
   BUYABLE_TIERS,
+  EXTRA_JUROR_COST_CAP_USD,
   EXTRA_JUROR_USD,
   MARGIN_FLOOR,
   MAX_EXTRA_JURORS,
@@ -25,14 +27,22 @@ import {
   WHOP_FEE,
   type TierName,
 } from "@/lib/constants";
-import { HALF_DEFAULT, checkCoupon, configuredCoupon, couponEndsLabel, couponPrice, type Coupon } from "@/lib/coupons";
+import {
+  LAUNCH20_DEFAULT,
+  bestVerdictDiscount,
+  checkCoupon,
+  configuredCoupon,
+  couponEndsLabel,
+  couponPrice,
+  type Coupon,
+} from "@/lib/coupons";
 import { checkLaunch, grossMargin, marginOk, panelSpec, priceFloor } from "@/lib/guardrails";
 
-const BASE_PRICES = { spark: 11, proof: 299, retest: 59 };
+const BASE_PRICES = { spark: 49, proof: 299, retest: 129 };
 const NOW = new Date("2026-10-24T12:00:00Z");
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3600_000).toISOString();
 const daysAgo = (d: number) => new Date(NOW.getTime() - d * 86_400_000).toISOString();
-const HALF: Coupon = HALF_DEFAULT;
+const LAUNCH20: Coupon = LAUNCH20_DEFAULT;
 const codeOf = (f: () => unknown) => {
   try {
     f();
@@ -41,19 +51,26 @@ const codeOf = (f: () => unknown) => {
   }
   return null;
 };
+/** Gross margin at the worst-case juror cost (the full cap) after Whop's fee (2.7% + $0.30). */
 const margin = (price: number, cap: number) => (price - cap - WHOP_FEE(price)) / price;
 
-describe("pricing constants (v3)", () => {
-  it("public plans: Quick Read $11 and Verdict $299 (20 jurors, cap $80); Retest $59; Pulse, Launch Pack and Specialist retired", () => {
+describe("pricing constants (v4, real Terac juror cost)", () => {
+  it("Quick Read $49 (3 jurors, cap $32), Verdict $299 (15 jurors, min 10, cap $158), Retest $129 (8, cap $84); retired tiers not sold", () => {
     expect(BUYABLE_TIERS).toEqual(["spark", "proof", "retest"]);
-    expect(TIERS.spark).toMatchObject({ price: 11, jurors: 3, minJurors: 3, jurorCostCap: 7, format: "spark", deadlineHours: 4, sold: true });
-    expect(TIERS.proof).toMatchObject({ price: 299, jurors: 20, minJurors: 14, minutes: 8, jurorCostCap: 80, format: "proof", deadlineHours: 8, sold: true });
-    expect(TIERS.retest).toMatchObject({ price: 59, jurors: 8, minJurors: 6, jurorCostCap: 32, format: "proof", deadlineHours: 8, sold: true });
+    expect(TIERS.spark).toMatchObject({ price: 49, jurors: 3, minJurors: 3, jurorCostCap: 32, format: "spark", deadlineHours: 4, sold: true });
+    expect(TIERS.proof).toMatchObject({ price: 299, jurors: 15, minJurors: 10, minutes: 8, jurorCostCap: 158, format: "proof", deadlineHours: 8, sold: true });
+    expect(TIERS.retest).toMatchObject({ price: 129, jurors: 8, minJurors: 6, jurorCostCap: 84, format: "proof", deadlineHours: 8, sold: true });
     expect([TIERS.pulse.sold, TIERS.launch_pack.sold, TIERS.specialist.sold]).toEqual([false, false, false]);
     expect(RETEST_WINDOW_DAYS).toBe(30);
-    expect([EXTRA_JUROR_USD, MAX_EXTRA_JURORS]).toEqual([7, 20]);
+    expect([EXTRA_JUROR_USD, EXTRA_JUROR_COST_CAP_USD, MAX_EXTRA_JURORS]).toEqual([16, 10.5, 20]);
     expect(VERDICT_BADGE).toBe("Recommended");
     expect([VERDICT_REGULAR_USD, VERDICT_REGULAR_FROM]).toEqual([499, "Dec 1"]);
+  });
+
+  it("each tier cap covers its full panel at Terac's ~$10.50 per juror", () => {
+    for (const tier of ["spark", "proof", "retest"] as const) {
+      expect(TIERS[tier].jurorCostCap).toBeGreaterThanOrEqual(TIERS[tier].jurors * 10.5);
+    }
   });
 
   it("labels: internal TIER_LABELS; customer-facing names never show retired names", () => {
@@ -70,19 +87,21 @@ describe("pricing constants (v3)", () => {
 
 describe("computePrice — tiers", () => {
   it.each<[TierName, number, number, number]>([
-    ["spark", 11, 3, 7],
-    ["proof", 299, 20, 80],
-    ["retest", 59, 8, 32],
+    ["spark", 49, 3, 32],
+    ["proof", 299, 15, 158],
+    ["retest", 129, 8, 84],
   ])("%s → $%d, %d jurors, cap $%d", (tier, price, jurors, cap) => {
     expect(computePrice({ tier, prices: BASE_PRICES, now: NOW })).toMatchObject({
-      priceUsd: price, listUsd: price, creditUsd: 0, discountUsd: 0, couponCode: null, extraJurors: 0, jurors, jurorCostCap: cap,
+      priceUsd: price, listUsd: price, creditUsd: 0, discountUsd: 0, couponCode: null, discountApplied: null, skippedDiscount: null,
+      extraJurors: 0, jurors, jurorCostCap: cap,
     });
   });
 
   it("uses the prices table (CEO-adjusted) over the constant, and falls back when missing", () => {
-    expect(computePrice({ tier: "proof", prices: { proof: 279 }, now: NOW }).priceUsd).toBe(279);
+    expect(computePrice({ tier: "proof", prices: { proof: 319 }, now: NOW }).priceUsd).toBe(319);
     expect(computePrice({ tier: "proof", prices: {}, now: NOW }).priceUsd).toBe(299);
-    expect(computePrice({ tier: "retest", prices: {}, now: NOW }).priceUsd).toBe(59);
+    expect(computePrice({ tier: "retest", prices: {}, now: NOW }).priceUsd).toBe(129);
+    expect(computePrice({ tier: "spark", prices: {}, now: NOW }).priceUsd).toBe(49);
   });
 
   it.each(["pulse", "launch_pack", "specialist"] as TierName[])("refuses %s with tier_not_offered", (tier) => {
@@ -101,18 +120,18 @@ describe("computePrice — tiers", () => {
   });
 });
 
-describe("computePrice — extra jurors ($7 each, 0–20)", () => {
+describe("computePrice — extra jurors ($16 each, 0–20, +$10.50 each to the cap)", () => {
   it.each<[TierName, number, number, number, number]>([
-    // tier, extra, price, jurors, cap (tier cap / tier jurors × jurors)
-    ["spark", 1, 18, 4, 9.33],
-    ["spark", 20, 151, 23, 53.67],
-    ["proof", 5, 334, 25, 100],
-    ["proof", 20, 439, 40, 160],
-    ["retest", 20, 199, 28, 112],
+    // tier, extra, price, jurors, cap (tier cap + 10.50 × extra)
+    ["spark", 1, 65, 4, 42.5],
+    ["spark", 20, 369, 23, 242],
+    ["proof", 5, 379, 20, 210.5],
+    ["proof", 20, 619, 35, 368],
+    ["retest", 20, 449, 28, 294],
   ])("%s + %d extra → $%d, %d jurors, cap $%d", (tier, extra, price, jurors, cap) => {
     const r = computePrice({ tier, extraJurors: extra, prices: BASE_PRICES, now: NOW });
-    expect(r).toMatchObject({ priceUsd: price, extraJurors: extra, extraJurorsUsd: extra * 7, jurors, jurorCostCap: cap });
-    expect(proRataCap(tier, jurors)).toBe(cap);
+    expect(r).toMatchObject({ priceUsd: price, extraJurors: extra, extraJurorsUsd: extra * 16, jurors, jurorCostCap: cap });
+    expect(panelCostCap(tier, extra)).toBe(cap);
   });
 
   it.each([-1, 21, 1.5, Number.NaN, 100])("refuses extra_jurors = %s (extra_jurors_out_of_range)", (n) => {
@@ -120,73 +139,109 @@ describe("computePrice — extra jurors ($7 each, 0–20)", () => {
   });
 
   it("0 and 20 are the inclusive bounds", () => {
-    expect(computePrice({ tier: "proof", extraJurors: 0, prices: BASE_PRICES }).jurors).toBe(20);
-    expect(computePrice({ tier: "proof", extraJurors: 20, prices: BASE_PRICES }).jurors).toBe(40);
+    expect(computePrice({ tier: "proof", extraJurors: 0, prices: BASE_PRICES }).jurors).toBe(15);
+    expect(computePrice({ tier: "proof", extraJurors: 20, prices: BASE_PRICES }).jurors).toBe(35);
   });
 });
 
-describe("coupon HALF", () => {
-  it("defaults, env end date, and ends at the end of Nov 30 ET", () => {
-    expect(configuredCoupon({})).toEqual({ code: "HALF", tier: "proof", percentOff: 50, endsAt: "2026-12-01T05:00:00.000Z", firstOrderOnly: true });
-    expect(configuredCoupon({ COUPON_HALF_ENDS_AT: "2026-12-15T05:00:00Z" }).endsAt).toBe("2026-12-15T05:00:00.000Z");
-    expect(configuredCoupon({ COUPON_HALF_ENDS_AT: "never" })).toEqual(HALF_DEFAULT); // a typo can't break checkout
-    expect(couponEndsLabel(HALF.endsAt)).toBe("Nov 30");
+describe("coupon LAUNCH20", () => {
+  it("defaults, env end date (COUPON_LAUNCH20_ENDS_AT), and ends at the end of Nov 30 ET", () => {
+    expect(configuredCoupon({})).toEqual({ code: "LAUNCH20", tier: "proof", percentOff: 20, endsAt: "2026-12-01T05:00:00.000Z", firstOrderOnly: true });
+    expect(configuredCoupon({ COUPON_LAUNCH20_ENDS_AT: "2026-12-15T05:00:00Z" }).endsAt).toBe("2026-12-15T05:00:00.000Z");
+    expect(configuredCoupon({ COUPON_LAUNCH20_ENDS_AT: "never" })).toEqual(LAUNCH20_DEFAULT); // a typo can't break checkout
+    expect(configuredCoupon({ COUPON_HALF_ENDS_AT: "2026-12-15T05:00:00Z" })).toEqual(LAUNCH20_DEFAULT); // the old env name is ignored
+    expect(couponEndsLabel(LAUNCH20.endsAt)).toBe("Nov 30");
   });
 
-  it("happy path: Verdict $299 → $149 (whole dollars, rounded down)", () => {
-    expect(couponPrice(299, 50)).toBe(149);
-    expect(checkCoupon({ code: "half", tier: "proof", now: NOW, priorPaidOrders: 0, coupon: HALF }).ok).toBe(true);
-    expect(computePrice({ tier: "proof", coupon: HALF, prices: BASE_PRICES, now: NOW })).toMatchObject({
-      priceUsd: 149, listUsd: 299, discountUsd: 150, couponCode: "HALF", creditUsd: 0,
+  it("happy path: Verdict $299 → $239 (20% off, whole dollars, rounded down)", () => {
+    expect(couponPrice(299, 20)).toBe(239);
+    expect(checkCoupon({ code: "launch20", tier: "proof", now: NOW, priorPaidOrders: 0, coupon: LAUNCH20 }).ok).toBe(true);
+    expect(computePrice({ tier: "proof", coupon: LAUNCH20, prices: BASE_PRICES, now: NOW })).toMatchObject({
+      priceUsd: 239, listUsd: 299, discountUsd: 60, couponCode: "LAUNCH20", creditUsd: 0, discountApplied: "coupon", skippedDiscount: null,
     });
   });
 
-  it("refusals: coupon_unknown / coupon_expired / coupon_not_applicable / coupon_already_used", () => {
+  it("refusals: coupon_unknown (incl. the retired HALF) / coupon_expired / coupon_not_applicable / coupon_already_used", () => {
     const code = (c: ReturnType<typeof checkCoupon>) => (c.ok ? "ok" : c.code);
-    expect(code(checkCoupon({ code: "TODAY50", tier: "proof", now: NOW, coupon: HALF }))).toBe("coupon_unknown");
-    expect(code(checkCoupon({ code: "HALF", tier: "proof", now: new Date("2026-12-01T05:00:00Z"), coupon: HALF }))).toBe("coupon_expired");
-    expect(code(checkCoupon({ code: "HALF", tier: "proof", now: new Date("2026-12-01T04:59:59Z"), coupon: HALF }))).toBe("ok");
-    expect(code(checkCoupon({ code: "HALF", tier: "spark", now: NOW, coupon: HALF }))).toBe("coupon_not_applicable");
-    expect(code(checkCoupon({ code: "HALF", tier: "retest", now: NOW, coupon: HALF }))).toBe("coupon_not_applicable");
-    expect(code(checkCoupon({ code: "HALF", tier: "proof", now: NOW, priorPaidOrders: 1, coupon: HALF }))).toBe("coupon_already_used");
+    expect(code(checkCoupon({ code: "TODAY50", tier: "proof", now: NOW, coupon: LAUNCH20 }))).toBe("coupon_unknown");
+    expect(code(checkCoupon({ code: "HALF", tier: "proof", now: NOW, coupon: LAUNCH20 }))).toBe("coupon_unknown");
+    expect(code(checkCoupon({ code: "half", tier: "proof", now: NOW }))).toBe("coupon_unknown"); // default config too
+    expect(code(checkCoupon({ code: "LAUNCH20", tier: "proof", now: new Date("2026-12-01T05:00:00Z"), coupon: LAUNCH20 }))).toBe("coupon_expired");
+    expect(code(checkCoupon({ code: "LAUNCH20", tier: "proof", now: new Date("2026-12-01T04:59:59Z"), coupon: LAUNCH20 }))).toBe("ok");
+    expect(code(checkCoupon({ code: "LAUNCH20", tier: "spark", now: NOW, coupon: LAUNCH20 }))).toBe("coupon_not_applicable");
+    expect(code(checkCoupon({ code: "LAUNCH20", tier: "retest", now: NOW, coupon: LAUNCH20 }))).toBe("coupon_not_applicable");
+    expect(code(checkCoupon({ code: "LAUNCH20", tier: "proof", now: NOW, priorPaidOrders: 1, coupon: LAUNCH20 }))).toBe("coupon_already_used");
   });
 
-  it("combines with the Quick Read upgrade credit: $149 − $11 = $138", () => {
-    const parentOrder = { tier: "spark" as TierName, price_usd: 11, paid_at: hoursAgo(2) };
-    expect(computePrice({ tier: "proof", coupon: HALF, parentOrder, prices: BASE_PRICES, now: NOW })).toMatchObject({
-      priceUsd: 138, discountUsd: 150, creditUsd: 11, couponCode: "HALF",
+  it("never discounts extra jurors", () => {
+    expect(computePrice({ tier: "proof", coupon: LAUNCH20, extraJurors: 10, prices: BASE_PRICES, now: NOW })).toMatchObject({
+      priceUsd: 239 + 160, discountUsd: 60, extraJurorsUsd: 160, jurors: 25, jurorCostCap: 263,
     });
-  });
-
-  it("never discounts extra jurors (with or without the credit)", () => {
-    expect(computePrice({ tier: "proof", coupon: HALF, extraJurors: 10, prices: BASE_PRICES, now: NOW })).toMatchObject({
-      priceUsd: 149 + 70, discountUsd: 150, extraJurorsUsd: 70, jurors: 30, jurorCostCap: 120,
-    });
-    const parentOrder = { tier: "spark" as TierName, price_usd: 11, paid_at: hoursAgo(2) };
-    expect(computePrice({ tier: "proof", coupon: HALF, parentOrder, extraJurors: 20, prices: BASE_PRICES, now: NOW }).priceUsd).toBe(138 + 140);
   });
 
   it("a coupon for another tier is ignored by computePrice (checkout refuses it earlier)", () => {
-    expect(computePrice({ tier: "spark", coupon: HALF, prices: BASE_PRICES, now: NOW }).priceUsd).toBe(11);
+    expect(computePrice({ tier: "spark", coupon: LAUNCH20, prices: BASE_PRICES, now: NOW }).priceUsd).toBe(49);
+    expect(computePrice({ tier: "retest", coupon: LAUNCH20, prices: BASE_PRICES, now: NOW }).priceUsd).toBe(129);
+  });
+});
+
+describe("one discount per order: LAUNCH20 vs the Quick Read upgrade credit", () => {
+  const qr = { tier: "spark" as TierName, price_usd: 49, paid_at: hoursAgo(2) };
+
+  it("both could apply → only the larger saving: LAUNCH20 ($60 off) beats the $49 credit → $239, never $190", () => {
+    const r = computePrice({ tier: "proof", coupon: LAUNCH20, parentOrder: qr, prices: BASE_PRICES, now: NOW });
+    expect(r).toMatchObject({
+      priceUsd: 239, discountUsd: 60, couponCode: "LAUNCH20", creditUsd: 0, discountApplied: "coupon",
+      skippedDiscount: { kind: "credit", code: null, usd: 49 },
+    });
+    expect(discountNote(r)).toBe("LAUNCH20 applied ($60 off). It doesn't combine with your Quick Read credit ($49), so we used the bigger saving.");
+  });
+
+  it("when the credit is larger it wins and the coupon is not used", () => {
+    const small = { ...LAUNCH20, percentOff: 10 }; // a smaller coupon: $30 off vs the $49 credit
+    const r = computePrice({ tier: "proof", coupon: small, parentOrder: qr, prices: BASE_PRICES, now: NOW });
+    expect(r).toMatchObject({
+      priceUsd: 250, discountUsd: 0, couponCode: null, creditUsd: 49, discountApplied: "credit",
+      skippedDiscount: { kind: "coupon", code: "LAUNCH20", usd: 30 },
+    });
+    expect(discountNote(r)).toBe("Your Quick Read credit applied ($49 off). It doesn't combine with LAUNCH20 ($30 off), so we used the bigger saving.");
+  });
+
+  it("bestVerdictDiscount: ties go to the coupon; nothing to choose → null", () => {
+    expect(bestVerdictDiscount({ listUsd: 299, coupon: LAUNCH20, creditUsd: 60 })).toEqual({ kind: "coupon", couponUsd: 60, creditUsd: 0, baseUsd: 239 });
+    expect(bestVerdictDiscount({ listUsd: 299, coupon: LAUNCH20, creditUsd: 49 })).toEqual({ kind: "coupon", couponUsd: 60, creditUsd: 0, baseUsd: 239 });
+    expect(bestVerdictDiscount({ listUsd: 299, coupon: null, creditUsd: 49 })).toEqual({ kind: "credit", couponUsd: 0, creditUsd: 49, baseUsd: 250 });
+    expect(bestVerdictDiscount({ listUsd: 299, coupon: null, creditUsd: 0 })).toEqual({ kind: null, couponUsd: 0, creditUsd: 0, baseUsd: 299 });
+  });
+
+  it("single-discount notes", () => {
+    expect(discountNote(computePrice({ tier: "proof", coupon: LAUNCH20, prices: BASE_PRICES, now: NOW }))).toBe("LAUNCH20 applied ($60 off).");
+    expect(discountNote(computePrice({ tier: "proof", parentOrder: qr, prices: BASE_PRICES, now: NOW }))).toBe("Your Quick Read credit applied ($49 off).");
+    expect(discountNote(computePrice({ tier: "proof", prices: BASE_PRICES, now: NOW }))).toBeNull();
+  });
+
+  it("extra jurors are added on top of whichever discount won", () => {
+    expect(computePrice({ tier: "proof", coupon: LAUNCH20, parentOrder: qr, extraJurors: 20, prices: BASE_PRICES, now: NOW }).priceUsd).toBe(239 + 320);
   });
 });
 
 describe("computePrice — upgrade credit (Quick Read → Verdict)", () => {
-  const spark = (paidHoursAgo: number | null, price = 11) => ({
+  const spark = (paidHoursAgo: number | null, price = 49) => ({
     tier: "spark" as TierName,
     price_usd: price,
     paid_at: paidHoursAgo === null ? null : hoursAgo(paidHoursAgo),
   });
   it.each<[string, Parameters<typeof computePrice>[0], number, number]>([
-    ["paid 2h ago → $288", { tier: "proof", parentOrder: spark(2), prices: BASE_PRICES, now: NOW }, 288, 11],
-    ["exactly 24h is still in window", { tier: "proof", parentOrder: spark(24), prices: BASE_PRICES, now: NOW }, 288, 11],
+    ["paid 2h ago → $250", { tier: "proof", parentOrder: spark(2), prices: BASE_PRICES, now: NOW }, 250, 49],
+    ["exactly 24h is still in window", { tier: "proof", parentOrder: spark(24), prices: BASE_PRICES, now: NOW }, 250, 49],
     ["24h + 1min is out of window", { tier: "proof", parentOrder: spark(24 + 1 / 60), prices: BASE_PRICES, now: NOW }, 299, 0],
     ["parent unpaid → no credit", { tier: "proof", parentOrder: spark(null), prices: BASE_PRICES, now: NOW }, 299, 0],
     ["paid_at in the future → no credit", { tier: "proof", parentOrder: spark(-1), prices: BASE_PRICES, now: NOW }, 299, 0],
-    ["Quick Read → Quick Read: no credit", { tier: "spark", parentOrder: spark(1), prices: BASE_PRICES, now: NOW }, 11, 0],
+    ["Quick Read → Quick Read: no credit", { tier: "spark", parentOrder: spark(1), prices: BASE_PRICES, now: NOW }, 49, 0],
     ["Verdict parent on a Verdict → no credit", { tier: "proof", parentOrder: { tier: "proof", price_usd: 299, paid_at: hoursAgo(1) }, prices: BASE_PRICES, now: NOW }, 299, 0],
-    ["Retest never takes credit", { tier: "retest", parentOrder: { tier: "proof", price_usd: 299, paid_at: hoursAgo(1) }, prices: BASE_PRICES, now: NOW }, 59, 0],
+    ["Retest never takes credit", { tier: "retest", parentOrder: { tier: "proof", price_usd: 299, paid_at: hoursAgo(1) }, prices: BASE_PRICES, now: NOW }, 129, 0],
     ["historical Pulse parent still counts", { tier: "proof", parentOrder: { tier: "pulse", price_usd: 49, paid_at: hoursAgo(1) }, prices: BASE_PRICES, now: NOW }, 250, 49],
+    ["an older, cheaper Quick Read is credited at what was paid", { tier: "proof", parentOrder: spark(1, 25), prices: BASE_PRICES, now: NOW }, 274, 25],
     ["cents are preserved", { tier: "proof", parentOrder: spark(1, 8.25), prices: BASE_PRICES, now: NOW }, 290.75, 8.25],
   ])("%s", (_name, input, price, credit) => {
     const r = computePrice(input);
@@ -202,37 +257,69 @@ describe("computePrice — upgrade credit (Quick Read → Verdict)", () => {
   });
 });
 
-describe("30% margin at worst-case juror cost (checkout time)", () => {
-  const credit = { tier: "spark" as TierName, price_usd: 11, paid_at: hoursAgo(1) };
+describe("30% margin after Whop's fee (2.7% + $0.30) at the worst-case juror cost cap (checkout time)", () => {
+  const qr = { tier: "spark" as TierName, price_usd: 49, paid_at: hoursAgo(1) };
 
-  it("every allowed combination passes, up to 20 extra jurors — incl. HALF + credit ($138 base)", () => {
+  it.each<[string, number, number, number]>([
+    // label, price, cap, expected margin
+    ["Quick Read $49 at cap $32", 49, 32, 0.3138],
+    ["Verdict $299 at cap $158", 299, 158, 0.4436],
+    ["Verdict with LAUNCH20 $239 at cap $158", 239, 158, 0.3107],
+    ["Verdict with the Quick Read credit $250 at cap $158", 250, 158, 0.3398],
+    ["Retest $129 at cap $84", 129, 84, 0.3195],
+    ["Verdict $239 + 20 extra ($320) at cap $158 + $210", 559, 368, 0.3141],
+    ["Quick Read $49 + 20 extra ($320) at cap $32 + $210", 369, 242, 0.3164],
+    ["Retest $129 + 20 extra ($320) at cap $84 + $210", 449, 294, 0.3175],
+    ["Verdict with credit $250 + 20 extra at cap $368", 570, 368, 0.3269],
+  ])("%s → margin ≈ %s", (_label, price, cap, expected) => {
+    expect(margin(price, cap)).toBeCloseTo(expected, 4);
+    expect(margin(price, cap)).toBeGreaterThanOrEqual(MARGIN_FLOOR);
+  });
+
+  it("computePrice produces those exact prices and caps", () => {
+    const at = (i: Omit<Parameters<typeof computePrice>[0], "prices" | "now">) => {
+      const r = computePrice({ ...i, prices: BASE_PRICES, now: NOW });
+      return [r.priceUsd, r.jurorCostCap];
+    };
+    expect(at({ tier: "spark" })).toEqual([49, 32]);
+    expect(at({ tier: "proof" })).toEqual([299, 158]);
+    expect(at({ tier: "proof", coupon: LAUNCH20 })).toEqual([239, 158]);
+    expect(at({ tier: "proof", parentOrder: qr })).toEqual([250, 158]);
+    expect(at({ tier: "retest" })).toEqual([129, 84]);
+    expect(at({ tier: "proof", coupon: LAUNCH20, extraJurors: 20 })).toEqual([559, 368]);
+    expect(at({ tier: "spark", extraJurors: 20 })).toEqual([369, 242]);
+  });
+
+  it("every allowed combination passes, 0–20 extra jurors, with LAUNCH20, the credit, or both offered", () => {
     for (const tier of ["spark", "proof", "retest"] as const) {
       for (let extra = 0; extra <= MAX_EXTRA_JURORS; extra++) {
         const r = computePrice({ tier, extraJurors: extra, prices: BASE_PRICES, now: NOW });
         expect(margin(r.priceUsd, r.jurorCostCap)).toBeGreaterThanOrEqual(MARGIN_FLOOR);
         if (tier === "proof") {
-          const c = computePrice({ tier, extraJurors: extra, coupon: HALF, parentOrder: credit, prices: BASE_PRICES, now: NOW });
-          expect(margin(c.priceUsd, c.jurorCostCap)).toBeGreaterThanOrEqual(MARGIN_FLOOR);
+          for (const discounts of [{ coupon: LAUNCH20 }, { parentOrder: qr }, { coupon: LAUNCH20, parentOrder: qr }]) {
+            const c = computePrice({ tier, extraJurors: extra, ...discounts, prices: BASE_PRICES, now: NOW });
+            expect(margin(c.priceUsd, c.jurorCostCap)).toBeGreaterThanOrEqual(MARGIN_FLOOR);
+          }
         }
       }
     }
   });
 
-  it("HALF + credit with max extra jurors: $138 + 20 × $7 = $278 at a $160 cap is ~39.6%", () => {
-    const r = computePrice({ tier: "proof", extraJurors: 20, coupon: HALF, parentOrder: credit, prices: BASE_PRICES, now: NOW });
-    expect(r).toMatchObject({ priceUsd: 278, jurors: 40, jurorCostCap: 160 });
-    expect(margin(r.priceUsd, r.jurorCostCap)).toBeCloseTo(0.396, 3);
-    expect(margin(138, 80)).toBeCloseTo(0.391, 3);
+  it("stacking LAUNCH20 and the credit would break the floor ($190 at a $158 cap ≈ 14%), which is why they never combine", () => {
+    expect(margin(190, 158)).toBeLessThan(MARGIN_FLOOR);
   });
 
-  it("refuses impossible combinations (margin_too_low)", () => {
-    // HALF on a Verdict the CEO priced at the bottom of its band ($224.25 → $112) can't carry an $80 cap.
-    expect(codeOf(() => computePrice({ tier: "proof", coupon: HALF, prices: { proof: 224.25 }, now: NOW }))).toBe("margin_too_low");
+  it("refuses combinations below 30% (margin_too_low)", () => {
+    // LAUNCH20 on a Verdict moved to $294 → $235 can't carry the $158 cap ($295 → $236 can).
+    expect(codeOf(() => computePrice({ tier: "proof", coupon: LAUNCH20, prices: { proof: 294 }, now: NOW }))).toBe("margin_too_low");
+    expect(computePrice({ tier: "proof", coupon: LAUNCH20, prices: { proof: 295 }, now: NOW }).priceUsd).toBe(236);
     // A deeper coupon.
-    expect(codeOf(() => computePrice({ tier: "proof", coupon: { ...HALF, percentOff: 75 }, prices: BASE_PRICES, now: NOW }))).toBe("margin_too_low");
-    // A Retest priced below its floor; extra jurors ($7 vs $4 cost each) can lift it back over.
-    expect(codeOf(() => computePrice({ tier: "retest", prices: { retest: 40 }, now: NOW }))).toBe("margin_too_low");
-    expect(computePrice({ tier: "retest", extraJurors: 20, prices: { retest: 40 }, now: NOW }).priceUsd).toBe(180);
+    expect(codeOf(() => computePrice({ tier: "proof", coupon: { ...LAUNCH20, percentOff: 50 }, prices: BASE_PRICES, now: NOW }))).toBe("margin_too_low");
+    // Quick Read and Retest below their floors.
+    expect(codeOf(() => computePrice({ tier: "spark", prices: { spark: 45 }, now: NOW }))).toBe("margin_too_low");
+    expect(codeOf(() => computePrice({ tier: "retest", prices: { retest: 120 }, now: NOW }))).toBe("margin_too_low");
+    // Extra jurors ($16 vs $10.50 cost each) can lift a thin price back over the floor.
+    expect(computePrice({ tier: "retest", extraJurors: 20, prices: { retest: 120 }, now: NOW }).priceUsd).toBe(440);
   });
 });
 
@@ -292,29 +379,42 @@ describe("retestRefusal — eligibility", () => {
   });
 });
 
-describe("guardrails for the v3 tiers", () => {
-  it("Retest ($59) keeps ≥ 30% margin at its full juror cap, and launches at the cap", () => {
-    expect(margin(59, 32)).toBeGreaterThanOrEqual(MARGIN_FLOOR);
-    const spec = panelSpec({ tier: "retest", addons: [], price_usd: 59 });
-    expect(spec).toEqual({ format: "proof", maxJurors: 8, minJurors: 6, costCap: 32, minutes: 8, deadlineHours: 8 });
-    expect(checkLaunch({ price: 59, cpi: 4, spec })).toEqual({ n: 8, budget: 32 });
-    expect(marginOk(59, 4, 8)).toBe(true);
+describe("guardrails for the v4 tiers (launch time)", () => {
+  it("Retest ($129) keeps ≥ 30% margin at its full juror cap, and launches 8 jurors at $10.50", () => {
+    expect(margin(129, 84)).toBeGreaterThanOrEqual(MARGIN_FLOOR);
+    const spec = panelSpec({ tier: "retest", addons: [], price_usd: 129 });
+    expect(spec).toEqual({ format: "proof", maxJurors: 8, minJurors: 6, costCap: 84, minutes: 8, deadlineHours: 8 });
+    expect(checkLaunch({ price: 129, cpi: 10.5, spec })).toEqual({ n: 8, budget: 84 });
+    expect(marginOk(129, 10.5, 8)).toBe(true);
   });
 
-  it("Verdict: 20 jurors, min 14, cap $80; cost floors clear the couponed price", () => {
-    expect(panelSpec({ tier: "proof", addons: [], price_usd: 299 })).toMatchObject({ format: "proof", maxJurors: 20, minJurors: 14, costCap: 80 });
-    expect(grossMargin(299, 4, 20) / 299).toBeGreaterThanOrEqual(MARGIN_FLOOR);
-    expect(priceFloor("proof")).toBe(119.32);
-    expect(priceFloor("proof")).toBeLessThanOrEqual(138);
-    expect(priceFloor("spark")).toBeLessThanOrEqual(11);
+  it("Quick Read ($49) launches 3 jurors at $10.50", () => {
+    const spec = panelSpec({ tier: "spark", addons: [], price_usd: 49 });
+    expect(spec).toMatchObject({ maxJurors: 3, minJurors: 3, costCap: 32 });
+    expect(checkLaunch({ price: 49, cpi: 10.5, spec })).toEqual({ n: 3, budget: 31.5 });
   });
 
-  it("panelSpec includes paid extra jurors; the launch-time real-cost check covers them", () => {
-    const spec = panelSpec({ tier: "proof", addons: [], price_usd: 278, extra_jurors: 20 });
-    expect(spec).toMatchObject({ maxJurors: 40, minJurors: 14, costCap: 160 });
-    expect(checkLaunch({ price: 278, cpi: 4, spec })).toEqual({ n: 40, budget: 160 });
-    expect(() => checkLaunch({ price: 200, cpi: 4, spec })).toThrow(/Margin/);
-    expect(panelSpec({ tier: "proof", addons: [], price_usd: 299, extra_jurors: null }).maxJurors).toBe(20);
+  it("Verdict: 15 jurors, min 10, cap $158; launches 15 at $10.50, even at the LAUNCH20 price; cost floors clear the discounted prices", () => {
+    const spec = panelSpec({ tier: "proof", addons: [], price_usd: 299 });
+    expect(spec).toMatchObject({ format: "proof", maxJurors: 15, minJurors: 10, costCap: 158 });
+    expect(checkLaunch({ price: 299, cpi: 10.5, spec })).toEqual({ n: 15, budget: 157.5 });
+    expect(checkLaunch({ price: 239, cpi: 10.5, spec: panelSpec({ tier: "proof", addons: [], price_usd: 239 }) })).toEqual({ n: 15, budget: 157.5 });
+    expect(grossMargin(239, 10.5, 15) / 239).toBeGreaterThanOrEqual(MARGIN_FLOOR);
+    expect(priceFloor("proof")).toBe(235.22);
+    expect(priceFloor("proof")).toBeLessThanOrEqual(239);
+    expect(priceFloor("spark")).toBe(48);
+    expect(priceFloor("spark")).toBeLessThanOrEqual(49);
+    expect(priceFloor("retest")).toBe(125.27);
+    expect(priceFloor("retest")).toBeLessThanOrEqual(129);
+  });
+
+  it("panelSpec includes paid extra jurors (+$10.50 each to the cap); the launch-time real-cost check covers them", () => {
+    const spec = panelSpec({ tier: "proof", addons: [], price_usd: 559, extra_jurors: 20 });
+    expect(spec).toMatchObject({ maxJurors: 35, minJurors: 10, costCap: 368 });
+    expect(checkLaunch({ price: 559, cpi: 10.5, spec })).toEqual({ n: 35, budget: 367.5 });
+    expect(() => checkLaunch({ price: 450, cpi: 10.5, spec })).toThrow(/Margin/);
+    expect(panelSpec({ tier: "proof", addons: [], price_usd: 299, extra_jurors: null }).maxJurors).toBe(15);
+    expect(panelSpec({ tier: "spark", addons: [], price_usd: 369, extra_jurors: 20 })).toMatchObject({ maxJurors: 23, costCap: 242 });
   });
 });
 
@@ -323,12 +423,12 @@ describe("checkoutTitle", () => {
     expect(checkoutTitle("proof")).toBe("JuryHour Verdict");
     expect(checkoutTitle("spark")).toBe("JuryHour Quick Read");
     expect(checkoutTitle("retest")).toBe("JuryHour Retest");
-    expect(checkoutTitle("proof", { extraJurors: 5, couponCode: "HALF" })).toBe("JuryHour Verdict +5");
-    expect(checkoutTitle("proof", { couponCode: "HALF", creditUsd: 11, orderRef: "JH-F9DA6201" })).toBe("Verdict · JH-F9DA6201");
+    expect(checkoutTitle("proof", { extraJurors: 5, couponCode: "LAUNCH20" })).toBe("JuryHour Verdict +5");
+    expect(checkoutTitle("proof", { couponCode: "LAUNCH20", orderRef: "JH-F9DA6201" })).toBe("Verdict · JH-F9DA6201");
     expect(checkoutTitle("spark", { extraJurors: 20, orderRef: "JH-F9DA6201" })).toBe("Quick Read +20 · JH-F9DA6201");
     for (const tier of ["spark", "proof", "retest"] as const) {
       for (const extraJurors of [0, 1, 20]) {
-        expect(checkoutTitle(tier, { extraJurors, couponCode: "HALF", creditUsd: 11, orderRef: "JH-ABCDEF12" }).length).toBeLessThanOrEqual(WHOP_TITLE_MAX);
+        expect(checkoutTitle(tier, { extraJurors, couponCode: "LAUNCH20", creditUsd: 49, orderRef: "JH-ABCDEF12" }).length).toBeLessThanOrEqual(WHOP_TITLE_MAX);
       }
     }
   });

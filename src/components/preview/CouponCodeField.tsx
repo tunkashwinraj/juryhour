@@ -23,7 +23,7 @@ export function CouponCodeField({ label = "Discount or referral code" }: { label
     ? error
     : !code
       ? coupon
-        ? `${coupon.code} takes your first Verdict to half price.`
+        ? `${coupon.code} takes ${coupon.percentOff}% off your first Verdict.`
         : "Partner codes tell us who sent you."
       : matches
         ? `${coupon!.code} applied to your first Verdict.`

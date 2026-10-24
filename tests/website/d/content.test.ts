@@ -103,12 +103,14 @@ describe("FAQ content", () => {
     expect(() => faqByIds(["nope"])).toThrow();
   });
 
-  it("partner codes never discount; only the Verdict launch code does", () => {
-    const text = ALL_FAQ.map((i) => i.aText).join(" ").toLowerCase();
-    expect(text).not.toMatch(/\b\d+% off\b/);
+  it("partner codes never discount; only the Verdict launch code (LAUNCH20) does", () => {
+    const others = ALL_FAQ.filter((i) => i.id !== "codes").map((i) => i.aText).join(" ").toLowerCase();
+    expect(others).not.toMatch(/\b\d+% off\b/);
     const codes = faqByIds(["codes"])[0].aText;
     expect(codes).toMatch(/don't change the price/);
-    expect(codes).toMatch(/Verdict launch code/);
+    expect(codes).toContain("20% off your first Verdict with code LAUNCH20 until Nov 30 → $239");
+    expect(codes).toMatch(/doesn't combine/);
+    expect(ALL_FAQ.map((i) => i.aText).join(" ")).not.toMatch(/HALF|\$11\b|\$149|\$7 each/);
   });
 
   it("never shows retired tier names or sells Retest", () => {

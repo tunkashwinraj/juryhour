@@ -1,16 +1,19 @@
 // Business constants (SPEC §8). Frozen contract: only the lead changes this file.
 
-// Pricing v3 (founder decision 2026-10): two public plans — Quick Read (spark) $11 and Verdict (proof)
-// $299 launch offer — plus extra jurors ($7 each) and Retest ($59, sold only from a Verdict report).
+// Pricing v4, real juror cost (founder decision 2026-10): Terac charges ~$10.50 per juror with a screening
+// question (we always send one; Terac requires it to launch). Two public plans — Quick Read (spark) $49 and
+// Verdict (proof) $299 launch offer — plus extra jurors ($16 each, +$10.50 each to the juror cost cap) and
+// Retest ($129, sold only from a Verdict report). Every price keeps MARGIN_FLOOR after the Whop fee at the
+// full juror cost cap (tests/payments/pricing.test.ts checks the arithmetic).
 // Internal keys stay stable because orders/tests/prices rows reference them. pulse, launch_pack and
 // specialist are retired: kept so historical orders still resolve, never sold again.
 export const TIERS = {
-  spark:       { price: 11,   jurors: 3,  minJurors: 3,  minutes: 2,  jurorCostCap: 7,    format: "spark",      deadlineHours: 4,  sold: true },
+  spark:       { price: 49,   jurors: 3,  minJurors: 3,  minutes: 2,  jurorCostCap: 32,   format: "spark",      deadlineHours: 4,  sold: true },
   pulse:       { price: 49,   jurors: 10, minJurors: 8,  minutes: 4,  jurorCostCap: 25,   format: "pulse",      deadlineHours: 4,  sold: false },
-  proof:       { price: 299,  jurors: 20, minJurors: 14, minutes: 8,  jurorCostCap: 80,   format: "proof",      deadlineHours: 8,  sold: true },
+  proof:       { price: 299,  jurors: 15, minJurors: 10, minutes: 8,  jurorCostCap: 158,  format: "proof",      deadlineHours: 8,  sold: true },
   // Retest: proof format on the customer's UPDATED page vs a fresh rewrite. Needs a delivered proof
   // parent (same email + mode) within RETEST_WINDOW_DAYS, one retest per parent (see lib/pricing).
-  retest:      { price: 59,   jurors: 8,  minJurors: 6,  minutes: 8,  jurorCostCap: 32,   format: "proof",      deadlineHours: 8,  sold: true },
+  retest:      { price: 129,  jurors: 8,  minJurors: 6,  minutes: 8,  jurorCostCap: 84,   format: "proof",      deadlineHours: 8,  sold: true },
   launch_pack: { price: 199,  jurors: 15, minJurors: 10, minutes: 8,  jurorCostCap: 60,   format: "proof",      deadlineHours: 8,  sold: false, retest: true },
   specialist:  { price: null, jurors: 8,  minJurors: 6,  minutes: 10, jurorCostCap: null, format: "specialist", deadlineHours: 72, sold: false },
 } as const;
@@ -51,9 +54,13 @@ export const VERDICT_BADGE = "Recommended";
 /** A Retest must be bought within this many days of its Verdict's delivery. */
 export const RETEST_WINDOW_DAYS = 30;
 
-/** Extra jurors: $7 each, 0–20 per order, on Quick Read, Verdict and Retest. Never discounted.
- *  Panel size = tier jurors + extra; the juror cost cap rises pro rata. */
-export const EXTRA_JUROR_USD = 7;
+/** Terac's measured price per juror with a screening question (we always send one). Planning number. */
+export const TERAC_JUROR_COST_USD = 10.5;
+
+/** Extra jurors: $16 each, 0–20 per order, on Quick Read, Verdict and Retest. Never discounted.
+ *  Panel size = tier jurors + extra; the juror cost cap rises by EXTRA_JUROR_COST_CAP_USD per extra juror. */
+export const EXTRA_JUROR_USD = 16;
+export const EXTRA_JUROR_COST_CAP_USD = TERAC_JUROR_COST_USD;
 export const MAX_EXTRA_JURORS = 20;
 export const EXTRA_JUROR_TIERS = ["spark", "proof", "retest"] as const satisfies readonly TierName[];
 

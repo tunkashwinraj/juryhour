@@ -16,10 +16,10 @@ export const metadata: Metadata = {
     template: "%s · JuryHour",
   },
   description:
-    "Paste your landing page. Real people who match your buyer judge it against an AI rewrite and tell you which one wins. From $11, same day. Directional signal from real people, not a sales guarantee.",
+    "Paste your landing page. Real people who match your buyer judge it against an AI rewrite and tell you which one wins. From $49, same day. Directional signal from real people, not a sales guarantee.",
   openGraph: {
     title: "JuryHour: real buyers, real verdict, before you launch",
-    description: "Before you spend $1,000 on ads, spend $11 to see if real people get your page.",
+    description: "Before you spend $1,000 on ads, spend $49 to see if real people get your page.",
     type: "website",
     siteName: "JuryHour",
   },

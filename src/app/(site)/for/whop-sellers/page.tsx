@@ -54,7 +54,7 @@ const seg: Segment = {
   highlight: "proof",
   pricingTitle: "Which package fits a Whop product?",
   pricingAnswer:
-    "Verdict is the one we recommend for a sales page: 20 real people compare your page with our rewrite and you get the winner. Quick Read is a fast first impression of your headline.",
+    "Verdict is the one we recommend for a sales page: 15 real people compare your page with our rewrite and you get the winner. Quick Read is a fast first impression of your headline.",
   faqTitle: "Questions from Whop sellers",
   faq: faqByIds(["what-tested", "enough", "who-jurors", "codes", "refunds", "guarantee", "unreleased"]),
 };

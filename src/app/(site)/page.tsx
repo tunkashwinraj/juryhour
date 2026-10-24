@@ -29,7 +29,7 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function Home() {
-  const { prices } = await getPricingSnapshot();
+  const { prices, coupon } = await getPricingSnapshot();
   const jhPrice = `${usd(tierPrice("spark", prices))} or ${usd(tierPrice("proof", prices))} per test`;
 
   return (
@@ -38,7 +38,7 @@ export default async function Home() {
         data={[
           organizationLd(),
           websiteLd(),
-          productOffersLd(prices),
+          productOffersLd(prices, coupon),
           faqLd(HOME_FAQ.map(({ q, aText }) => ({ q, aText }))),
         ]}
       />

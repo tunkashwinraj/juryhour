@@ -32,7 +32,7 @@ import { PRICING_FAQ } from "@/components/pricing/pricing-faq";
 import { HOME_FAQ, compareRows } from "@/components/marketing/home-content";
 import { PreviewProvider } from "@/components/preview/PreviewProvider";
 import { TIERS, type TierName } from "@/lib/constants";
-import { HALF_DEFAULT } from "@/lib/coupons";
+import { LAUNCH20_DEFAULT } from "@/lib/coupons";
 
 const CONSTANT_PRICES = Object.fromEntries((["spark", "proof", "retest"] as TierName[]).map((t) => [t, TIERS[t].price])) as Record<
   TierName,
@@ -45,7 +45,7 @@ beforeEach(() => {
   dbThrows = false;
 });
 afterEach(() => {
-  delete process.env.COUPON_HALF_ENDS_AT;
+  delete process.env.COUPON_LAUNCH20_ENDS_AT;
   vi.useRealTimers();
 });
 
@@ -54,8 +54,8 @@ describe("buildTierViews", () => {
     const v = buildTierViews(CONSTANT_PRICES);
     expect(TIER_ORDER).toEqual(["spark", "proof"]);
     expect(v.map((t) => t.name)).toEqual(["Quick Read", "Verdict"]);
-    expect(v.map((t) => t.price)).toEqual([11, 299]);
-    expect(v.map((t) => t.jurors)).toEqual([3, 20]);
+    expect(v.map((t) => t.price)).toEqual([49, 299]);
+    expect(v.map((t) => t.jurors)).toEqual([3, 15]);
     expect(v.filter((t) => t.recommended).map((t) => t.tier)).toEqual(["proof"]);
   });
 
@@ -66,20 +66,20 @@ describe("buildTierViews", () => {
   it("feature table: one cell per plan, launch-offer note, extra jurors, no Retest", () => {
     const rows = featureRows(buildTierViews(CONSTANT_PRICES));
     for (const row of rows) expect(row.cells).toHaveLength(TIER_ORDER.length);
-    expect(rows[0].cells).toEqual(["$11", "$299 launch offer · regular $499 from Dec 1"]);
+    expect(rows[0].cells).toEqual(["$49", "$299 launch offer · regular $499 from Dec 1"]);
     expect(rows.map((r) => r.label).join(" ")).not.toMatch(/retest/i);
-    expect(rows.find((r) => r.label.startsWith("Extra jurors"))?.cells).toEqual(["$7 each", "$7 each"]);
+    expect(rows.find((r) => r.label.startsWith("Extra jurors"))?.cells).toEqual(["$16 each", "$16 each"]);
   });
 });
 
-describe("Verdict launch copy and HALF display", () => {
+describe("Verdict launch copy and LAUNCH20 display", () => {
   it("states the launch offer without a strike-through or 'was' price", () => {
     expect(VERDICT_LAUNCH_NOTE).toBe("launch offer · regular $499 from Dec 1");
   });
-  it("HALF: $149 through Nov 30", () => {
-    expect(verdictCouponPrice(CONSTANT_PRICES, HALF_DEFAULT)).toBe(149);
-    expect(couponEndsLabel(HALF_DEFAULT.endsAt)).toBe("Nov 30");
-    expect(couponAdLine(CONSTANT_PRICES, HALF_DEFAULT)).toBe("First Verdict? Code HALF makes it $149 through Nov 30.");
+  it("LAUNCH20: 20% off → $239 until Nov 30", () => {
+    expect(verdictCouponPrice(CONSTANT_PRICES, LAUNCH20_DEFAULT)).toBe(239);
+    expect(couponEndsLabel(LAUNCH20_DEFAULT.endsAt)).toBe("Nov 30");
+    expect(couponAdLine(CONSTANT_PRICES, LAUNCH20_DEFAULT)).toBe("20% off your first Verdict with code LAUNCH20 until Nov 30 → $239.");
   });
 });
 
@@ -96,9 +96,9 @@ describe("getPricingSnapshot", () => {
     expect((await getPricingSnapshot()).prices.proof).toBe(279);
   });
 
-  it("carries HALF until 2026-12-01T05:00Z (end of Nov 30 ET), then none", async () => {
+  it("carries LAUNCH20 until 2026-12-01T05:00Z (end of Nov 30 ET), then none", async () => {
     vi.useFakeTimers({ now: new Date("2026-11-30T23:00:00Z"), toFake: ["Date"] });
-    expect((await getPricingSnapshot()).coupon).toMatchObject({ code: "HALF", tier: "proof", percentOff: 50, firstOrderOnly: true });
+    expect((await getPricingSnapshot()).coupon).toMatchObject({ code: "LAUNCH20", tier: "proof", percentOff: 20, firstOrderOnly: true });
     vi.setSystemTime(new Date("2026-12-01T05:00:00Z"));
     expect((await getPricingSnapshot()).coupon).toBeNull();
   });
@@ -106,8 +106,8 @@ describe("getPricingSnapshot", () => {
 
 describe("copy rules", () => {
   it("lines under the plans", () => {
-    expect(UPGRADE_CREDIT_LINE).toBe("Your $11 counts toward a Verdict for 24 hours.");
-    expect(EXTRA_JURORS_LINE).toBe("Add up to 20 extra jurors to a Quick Read or Verdict at $7 each.");
+    expect(UPGRADE_CREDIT_LINE).toBe("Your $49 counts toward a Verdict for 24 hours.");
+    expect(EXTRA_JURORS_LINE).toBe("Add up to 20 extra jurors to a Quick Read or Verdict at $16 each.");
   });
 
   it("never shows retired names, packs, a second page, popularity claims or Retest", () => {
@@ -116,10 +116,10 @@ describe("copy rules", () => {
       featureRows(buildTierViews(CONSTANT_PRICES)),
       PRICING_FAQ.map((f) => [f.q, f.aText]),
       HOME_FAQ.map((f) => [f.q, f.aText]),
-      compareRows("$11 or $299 per test"),
+      compareRows("$49 or $299 per test"),
     ]);
     expect(text).not.toMatch(OLD_NAMES);
-    expect(text).not.toMatch(/\$990|packs|TODAY50|second page|most chosen|most popular/i);
+    expect(text).not.toMatch(/HALF|\$11\b|\$149|\$138|\$7 each|\$59\b|\$990|packs|TODAY50|second page|most chosen|most popular/i);
     expect(text).not.toMatch(/retest/i);
     expect(text).not.toMatch(/was \$499|normally/i);
   });
@@ -132,27 +132,27 @@ describe("PricingSection render", () => {
     await stream.allReady;
     return (await new Response(stream).text()).replace(/<!-- -->/g, "");
   }
-  const render = async (coupon: typeof HALF_DEFAULT | null) => {
+  const render = async (coupon: typeof LAUNCH20_DEFAULT | null) => {
     const { PricingSection } = await import("@/components/pricing/PricingSection");
     const section = await PricingSection({});
     return html(<PreviewProvider coupon={coupon}>{section}</PreviewProvider>);
   };
 
-  it("server-renders the two plans, the launch note, HALF with its end date and extras, with no loading state", async () => {
-    const out = await render(HALF_DEFAULT);
-    for (const s of ["Quick Read", "Verdict", "Recommended", "$11", "$299", "$499 from Dec 1", "HALF", "$149", "through Nov 30", "$7 each", "Have a code?"]) {
+  it("server-renders the two plans, the launch note, LAUNCH20 with its end date and extras, with no loading state", async () => {
+    const out = await render(LAUNCH20_DEFAULT);
+    for (const s of ["Quick Read", "Verdict", "Recommended", "$49", "$299", "$499 from Dec 1", "LAUNCH20", "$239", "until Nov 30", "15 real people", "$16 each", "Have a code?"]) {
       expect(out).toContain(s);
     }
-    expect(out).toContain("Your $11 counts toward a Verdict for 24 hours.");
+    expect(out).toContain("Your $49 counts toward a Verdict for 24 hours.");
     expect(out).not.toMatch(OLD_NAMES);
-    expect(out).not.toMatch(/retest|\$990|TODAY50|normally|<s>|Most popular/i);
+    expect(out).not.toMatch(/HALF|\$11\b|\$149|\$7 each|retest|\$990|TODAY50|normally|<s>|Most popular/i);
     expect(out.toLowerCase()).not.toContain("loading");
   });
 
   it("without a running coupon: launch price only", async () => {
     const out = await render(null);
     expect(out).toContain("$299");
-    expect(out).not.toContain("HALF");
-    expect(out).not.toContain("$149");
+    expect(out).not.toContain("LAUNCH20");
+    expect(out).not.toContain("$239");
   });
 });

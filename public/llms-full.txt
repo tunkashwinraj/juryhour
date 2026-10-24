@@ -1,6 +1,6 @@
 # JuryHour: full description for language models
 
-> JuryHour tests a landing page or pitch with real people who match your buyer. An AI agent writes a challenger version; real, identity-verified people recruited through Terac judge yours against it in random order; you get a written verdict with anonymous quotes and the winning copy, usually the same day. From $11. Directional research from a small panel of real people, not a sales guarantee.
+> JuryHour tests a landing page or pitch with real people who match your buyer. An AI agent writes a challenger version; real, identity-verified people recruited through Terac judge yours against it in random order; you get a written verdict with anonymous quotes and the winning copy, usually the same day. From $49. Directional research from a small panel of real people, not a sales guarantee.
 
 Last updated: Oct 24, 2026. Prices and packages can change; the checkout always shows the current price. Links are relative to this site's origin. Short version: [/llms.txt](/llms.txt).
 
@@ -18,18 +18,20 @@ JuryHour describes itself as "a company with zero employees". AI agents run rese
 4. Quality checks. Answers are checked for time on task, an attention check, minimum length, and graded by AI. Clearly low-quality work is rejected with a written reason and isn't paid for.
 5. You get the verdict. Which version won and by how much, a scorecard, the top fixes with juror quotes as evidence, issues neither version solved, and the winning copy ready to paste. Every quote is verbatim from a stored juror answer and every number is computed from the database; a checker blocks delivery otherwise.
 
-Limits: panels are small (3 to 40 people), audience matching is approximate, and stated reactions can differ from real buying behavior. Treat results as directional signal. Only public pages are tested; do not submit confidential material. JuryHour delivers copy and findings; it does not edit your site.
+Limits: panels are small (3 to 35 people), audience matching is approximate, and stated reactions can differ from real buying behavior. Treat results as directional signal. Only public pages are tested; do not submit confidential material. JuryHour delivers copy and findings; it does not edit your site.
 
 ## Packages and prices (USD, as of Oct 24, 2026)
 
 | Package | Price | Jurors (minimum to deliver) | What you get | Delivery window |
 |---|---|---|---|---|
-| Quick Read | $11 | 3 (3) | 2-minute reaction to your headline, AI critique, 1 rewritten headline (untested) | 4 hours |
-| Verdict (recommended) | $299 launch offer; regular $499 from Dec 1, 2026 | 20 (14) | 8-minute test: your page vs our AI rewrite, blind and in random order; winner, scorecard, top fixes, winning copy | 8 hours |
+| Quick Read | $49 | 3 (3) | 2-minute reaction to your headline, AI critique, 1 rewritten headline (untested) | 4 hours |
+| Verdict (recommended) | $299 launch offer; regular $499 from Dec 1, 2026 | 15 (10) | 8-minute test: your page vs our AI rewrite, blind and in random order; winner, scorecard, top fixes, winning copy | 8 hours |
 
-- Code HALF: your first Verdict is $149 (50% off the Verdict price, rounded down) through Nov 30, 2026 (ET). One per customer (the first Verdict for your email). Applied at checkout when you arrive with the code in the link or type it in "Have a code?". It applies to the Verdict price only (not extra jurors) and works with the Quick Read upgrade credit ($149 − $11 = $138).
-- Extra jurors: add up to 20 to a Quick Read or Verdict at $7 each. The panel grows by that many people. Codes and credits never discount them.
-- Upgrade credit: a Quick Read counts toward a Verdict if you upgrade within 24 hours ($299 − $11 = $288).
+- Code LAUNCH20: 20% off your first Verdict until Nov 30, 2026 (ET) → $239 (rounded down to whole dollars). One per customer (the first Verdict for your email). Applied at checkout when you arrive with the code in the link (?code=LAUNCH20) or type it in "Have a code?". It applies to the Verdict price only (not extra jurors).
+- Extra jurors: add up to 20 to a Quick Read or Verdict at $16 each. The panel grows by that many people. Codes and credits never discount them.
+- Upgrade credit: a Quick Read counts toward a Verdict if you upgrade within 24 hours ($299 − $49 = $250).
+- One discount per order: LAUNCH20 and the upgrade credit don't combine. If both could apply, checkout applies the bigger saving (LAUNCH20, $60 off, beats the $49 credit) and says which one it used.
+- Retest, $129: 8 new real people (minimum 6) judge your updated page against a fresh rewrite. Offered only from a delivered Verdict report, within 30 days, once per Verdict.
 - Partner codes (for example LOVABLE or WHOP) record where you came from. They do not give discounts.
 - Payments, refunds and disputes are processed by Whop.
 
@@ -37,7 +39,7 @@ Limits: panels are small (3 to 40 people), audience matching is approximate, and
 
 - Full refund, automatically, if we can't recruit your audience within your package's budget (after shrinking the panel to its minimum or broadening the audience once).
 - Full refund, automatically, if fewer than the minimum number of jurors (table above) have given usable answers when the deadline passes, after a 1-hour grace period.
-- Pro-rata refund, automatically, if the minimum is met but the panel is short: price paid × (jurors requested − jurors delivered) ÷ jurors requested. Example: a $299 Verdict with 20 jurors requested that delivers 16 refunds $59.80. "Jurors requested" is the size of the panel actually launched.
+- Pro-rata refund, automatically, if the minimum is met but the panel is short: price paid × (jurors requested − jurors delivered) ÷ jurors requested. Example: a $299 Verdict with 15 jurors requested that delivers 13 refunds $39.87. "Jurors requested" is the size of the panel actually launched.
 - Full refund, automatically, if a step of the order fails 3 times.
 - Refund on request, once per order, if the verdict is more than 2× its delivery window late or the report failed.
 - No refund because a verdict wasn't the one you hoped for. Refused content is never charged.

@@ -94,7 +94,7 @@ export type PreviewContextValue = {
   setSalesPaused(v: boolean): void;
   selectedTier: CtaTier | null;
   selectTier(t: CtaTier | null): void;
-  /** Extra jurors (0–15, $7 each) for Quick Read / Verdict / Retest checkouts. */
+  /** Extra jurors (0–20, $16 each) for Quick Read / Verdict / Retest checkouts. */
   extraJurors: number;
   setExtraJurors(n: number): void;
   /** Code typed into "Have a code?" (null = use the attributed ?code=). */

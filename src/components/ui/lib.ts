@@ -31,7 +31,7 @@ export function jurorLabel(juror: number | string): string {
   return `Juror ${s}`;
 }
 
-/** Whole-dollar price for display: 149 → "$149", 1499 → "$1,499", 9.5 → "$9.50". */
+/** Whole-dollar price for display: 239 → "$239", 1499 → "$1,499", 9.5 → "$9.50". */
 export function formatPrice(n: number): string {
   const cents = !Number.isInteger(n);
   return `$${n.toLocaleString("en-US", { minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0 })}`;

@@ -1,18 +1,23 @@
 // POST /api/checkout — create a CREATED order + Whop checkout (SPEC §10, CONTRACTS §4).
 // in  { tier, extra_jurors?, coupon?, code?, email, buyer_desc, url?, pitch_text?, preview_id?, parent_order_id?, src?, addons? }
 //     (url XOR pitch_text; `addons` must be empty — legacy field)
-// out { ok:true, purchase_url, token, price_usd, coupon_applied, credit_usd } | { ok:false, code, error }
-// Sold here: spark (Quick Read), proof (Verdict), retest (Retest), each with 0–20 extra jurors at $7.
+// out { ok:true, purchase_url, token, price_usd, coupon_applied, credit_usd, discount_applied, discount_note }
+//     | { ok:false, code, error }
+// Sold here: spark (Quick Read $49), proof (Verdict $299), retest (Retest $129), each with 0–20 extra jurors
+// at $16. One discount per order: the coupon and the Quick Read upgrade credit never stack; when both could
+// apply, only the larger saving is applied (`discount_applied`: "coupon" | "credit" | null) and
+// `discount_note` says so in plain English for the UI.
 // Refusals (400):
 //   tier_not_offered    retired (pulse, launch_pack, specialist) or unknown tier
 //   addons_not_offered  any legacy add-on (extra5/rush are no longer sold)
 //   extra_jurors_out_of_range  extra_jurors not an integer 0–20
 //   coupon_unknown / coupon_expired / coupon_not_applicable / coupon_already_used
-//                       explicit `coupon` that can't be applied (HALF: Verdict only, first Verdict per email)
+//                       explicit `coupon` that can't be applied (LAUNCH20: Verdict only, first Verdict per email;
+//                       any other code, including retired ones, is coupon_unknown)
 //   margin_too_low      the combination can't keep the 30% margin at worst-case juror cost
 //   retest_needs_parent / retest_parent_not_eligible / retest_window_expired / retest_already_used
 //   bad_parent          upgrade parent not found for this email + mode
-// `code` is attribution (partner/referral). When it equals the live coupon code (?code=HALF) and the
+// `code` is attribution (partner/referral). When it equals the live coupon code (?code=LAUNCH20) and the
 // coupon applies (Verdict, first Verdict for this email), it is applied automatically; otherwise it
 // never changes the price or refuses.
 import { randomUUID } from "node:crypto";
@@ -27,6 +32,7 @@ import {
   BUYABLE_TIERS_TEXT,
   checkoutTitle,
   computePrice,
+  discountNote,
   PricingError,
   isBuyableTier,
   retestRefusal,
@@ -104,7 +110,7 @@ async function loadUpgradeParent(parentId: string, email: string, mode: string):
   return { parent: { tier: row.tier, price_usd: Number(row.price_usd ?? 0), paid_at: row.paid_at } };
 }
 
-/** Paid orders of `tier` for this email + mode (HALF is for a customer's first Verdict). */
+/** Paid orders of `tier` for this email + mode (LAUNCH20 is for a customer's first Verdict). */
 async function paidOrdersOf(email: string, mode: string, tier: TierName): Promise<number> {
   const res = await db()
     .from("orders")
@@ -270,6 +276,9 @@ export async function POST(req: NextRequest) {
         [
           quote.couponCode ? `coupon ${quote.couponCode} −$${quote.discountUsd}` : null,
           quote.creditUsd > 0 ? `upgrade credit $${quote.creditUsd} from ${b.parent_order_id}` : null,
+          quote.skippedDiscount
+            ? `not combined: ${quote.skippedDiscount.kind === "coupon" ? `coupon ${quote.skippedDiscount.code}` : "upgrade credit"} −$${quote.skippedDiscount.usd} (smaller saving)`
+            : null,
           tier === "retest" ? `retest of ${b.parent_order_id}` : null,
         ]
           .filter(Boolean)
@@ -282,6 +291,8 @@ export async function POST(req: NextRequest) {
         discount_usd: quote.discountUsd,
         coupon: quote.couponCode,
         credit_usd: quote.creditUsd,
+        discount_applied: quote.discountApplied,
+        skipped_discount: quote.skippedDiscount,
         extra_jurors: quote.extraJurors,
         jurors: quote.jurors,
         juror_cost_cap: quote.jurorCostCap,
@@ -298,6 +309,8 @@ export async function POST(req: NextRequest) {
         price_usd: quote.priceUsd,
         coupon_applied: quote.couponCode,
         credit_usd: quote.creditUsd,
+        discount_applied: quote.discountApplied,
+        discount_note: discountNote(quote),
       },
       requestId,
     );

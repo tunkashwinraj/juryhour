@@ -37,7 +37,7 @@ describe("refund policy matches the code", () => {
   it("pro-rata example uses the production formula", () => {
     const ex = proRataExample();
     expect(ex.refund).toBe(proRataRefund(TIERS.proof.price, TIERS.proof.jurors, ex.approved));
-    expect(ex.refund).toBeCloseTo((299 * 4) / 20, 2); // $59.80
+    expect(ex.refund).toBeCloseTo((299 * 2) / 15, 2); // $39.87
     expect(ex.approved).toBeGreaterThanOrEqual(TIERS.proof.minJurors);
   });
 
@@ -53,7 +53,7 @@ describe("refund policy matches the code", () => {
     expect(text).toContain(`fails ${MAX_STAGE_ATTEMPTS} times`);
     expect(text).toContain("one refund on request per order");
     expect(text).toContain(`more than ${TIERS.proof.deadlineHours * 2} hours for a Verdict`);
-    expect(text).toContain("$59.80");
+    expect(text).toContain("$39.87");
     expect(text).toContain("extra jurors");
     expect(text).not.toMatch(/Spark|Pulse|Proof|Launch Pack|Rush|Specialist/);
     expect(text).toContain("support@juryhour.com");

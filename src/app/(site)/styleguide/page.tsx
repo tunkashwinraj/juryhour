@@ -190,7 +190,7 @@ export default function StyleguidePage() {
               ))}
               <div className={s.scaleRow}>
                 <dt>mono</dt>
-                <dd style={{ fontFamily: "var(--font-mono)" }}>Juror 06 · Case 0142 · $299 · 17/20</dd>
+                <dd style={{ fontFamily: "var(--font-mono)" }}>Juror 06 · Case 0142 · $299 · 12/15</dd>
               </div>
             </dl>
           </section>
@@ -327,7 +327,7 @@ export default function StyleguidePage() {
             <div className={s.prices}>
               <PriceCard
                 name="Quick Read"
-                price={11}
+                price={49}
                 jurors={3}
                 summary="A 2-minute first impression of your headline."
                 bullets={["AI critique", "1 rewritten headline (untested)", "Same day"]}
@@ -341,13 +341,13 @@ export default function StyleguidePage() {
                 name="Verdict"
                 price={299}
                 priceSuffix="launch offer · regular $499 from Dec 1"
-                jurors={20}
+                jurors={15}
                 emphasized
                 badge={<Badge tone="verdict">Recommended</Badge>}
                 summary="Your page vs our rewrite, in random order."
                 bullets={["Verdict and scorecard", "Top fixes in jurors' words", "Winning copy to paste", "Same day"]}
                 cta={<Button full>Get Verdict</Button>}
-                footnote="Your $11 Quick Read counts toward it for 24 hours."
+                footnote="Your $49 Quick Read counts toward it for 24 hours."
               />
             </div>
           </section>
@@ -378,7 +378,7 @@ export default function StyleguidePage() {
                   aText: "Real people recruited and identity-verified through Terac who match the buyer you describe.",
                 },
                 {
-                  q: "Is 20 people enough?",
+                  q: "Is 15 people enough?",
                   a: <p>It&rsquo;s a directional signal, not a scientific study.</p>,
                   aText: "It's a directional signal, not a scientific study.",
                 },

@@ -1,14 +1,15 @@
-// Verdict coupons (founder decision 2026-10, pricing v3). Server-side truth: /api/checkout validates and
-// applies them; the site only displays what this module says. Pure helpers take `now` explicitly.
+// Verdict coupon (founder decision 2026-10, pricing v4). Server-side truth: /api/checkout validates and
+// applies it; the site only displays what this module says. Pure helpers take `now` explicitly.
 //
-// HALF: 50% off the Verdict (proof) base price ($299 → $149, rounded DOWN to whole dollars), first
+// LAUNCH20: 20% off the Verdict (proof) base price ($299 → $239, rounded DOWN to whole dollars), first
 // Verdict per customer (no earlier PAID proof order for that email in the same mode), until
-// COUPON_HALF_ENDS_AT (default 2026-12-01T05:00:00Z = end of Nov 30 ET). Never discounts extra jurors.
-// It MAY combine with the $11 Quick Read upgrade credit ($149 − $11 = $138); the 30% margin check in
-// computePrice still runs on the result.
+// COUPON_LAUNCH20_ENDS_AT (default 2026-12-01T05:00:00Z = end of Nov 30 ET). Never discounts extra jurors.
+// One discount per order: it does NOT stack with the Quick Read upgrade credit. When both could apply,
+// checkout takes only the larger saving (bestVerdictDiscount: LAUNCH20 $60 off beats the $49 credit).
+// Retired codes are refused as coupon_unknown like any other unknown code.
 //
 // Env (optional, read tolerantly so a typo can never take the app down):
-//   COUPON_HALF_ENDS_AT  ISO end time; a past time switches HALF off.
+//   COUPON_LAUNCH20_ENDS_AT  ISO end time; a past time switches LAUNCH20 off.
 import type { TierName } from "./constants";
 
 export type Coupon = {
@@ -23,21 +24,21 @@ export type Coupon = {
 /** What the browser may know about the coupon (it is public: it is advertised on the Verdict card). */
 export type PublicCoupon = Coupon;
 
-export const HALF_DEFAULT: Coupon = {
-  code: "HALF",
+export const LAUNCH20_DEFAULT: Coupon = {
+  code: "LAUNCH20",
   tier: "proof",
-  percentOff: 50,
+  percentOff: 20,
   endsAt: "2026-12-01T05:00:00.000Z",
   firstOrderOnly: true,
 };
-/** Back-compat alias: the default (and only) coupon. */
-export const DEFAULT_COUPON = HALF_DEFAULT;
+/** The default (and only) coupon. */
+export const DEFAULT_COUPON = LAUNCH20_DEFAULT;
 
 /** The configured coupon (env override for the end time; invalid values fall back to the default). */
 export function configuredCoupon(e: Record<string, string | undefined> = process.env): Coupon {
-  const ends = (e.COUPON_HALF_ENDS_AT ?? "").trim();
+  const ends = (e.COUPON_LAUNCH20_ENDS_AT ?? "").trim();
   const endsMs = ends ? Date.parse(ends) : NaN;
-  return { ...HALF_DEFAULT, endsAt: Number.isFinite(endsMs) ? new Date(endsMs).toISOString() : HALF_DEFAULT.endsAt };
+  return { ...LAUNCH20_DEFAULT, endsAt: Number.isFinite(endsMs) ? new Date(endsMs).toISOString() : LAUNCH20_DEFAULT.endsAt };
 }
 
 export function isCouponLive(c: Coupon, now: Date): boolean {
@@ -64,6 +65,27 @@ export function sameCode(a: string | null | undefined, b: string | null | undefi
 /** Discounted base price: whole dollars, rounded down (never below $1). */
 export function couponPrice(base: number, percentOff: number): number {
   return Math.max(1, Math.floor(base * (1 - percentOff / 100) + 1e-9));
+}
+
+export type VerdictDiscountKind = "coupon" | "credit" | null;
+
+/**
+ * One discount per order. Given the list price, the coupon (already validated, or null) and the upgrade
+ * credit available (already bounded), returns the single discount that saves the buyer more. Ties go
+ * to the coupon. Used by computePrice (the truth) and by the site to show what checkout will apply.
+ */
+export function bestVerdictDiscount(i: { listUsd: number; coupon: Pick<Coupon, "percentOff"> | null; creditUsd: number }): {
+  kind: VerdictDiscountKind;
+  couponUsd: number;
+  creditUsd: number;
+  baseUsd: number;
+} {
+  const couponUsd = i.coupon ? Math.max(0, i.listUsd - Math.min(i.listUsd, couponPrice(i.listUsd, i.coupon.percentOff))) : 0;
+  const credit = Math.max(0, i.creditUsd);
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  if (couponUsd > 0 && couponUsd >= credit) return { kind: "coupon", couponUsd: r2(couponUsd), creditUsd: 0, baseUsd: r2(i.listUsd - couponUsd) };
+  if (credit > 0) return { kind: "credit", couponUsd: 0, creditUsd: r2(credit), baseUsd: r2(i.listUsd - credit) };
+  return { kind: null, couponUsd: 0, creditUsd: 0, baseUsd: r2(i.listUsd) };
 }
 
 export type CouponRefusalCode = "coupon_unknown" | "coupon_expired" | "coupon_not_applicable" | "coupon_already_used";

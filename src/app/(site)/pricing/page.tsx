@@ -1,5 +1,5 @@
 // /pricing (docs/WEBSITE_SPEC.md §6): the shared PricingSection (Quick Read, Verdict), a feature
-// comparison, the HALF coupon, extra jurors, upgrade credit, pricing FAQ and a refund summary.
+// comparison, the LAUNCH20 coupon, extra jurors, upgrade credit, pricing FAQ and a refund summary.
 // Retest is not sold here (only from a Verdict report). Static shell; prices and the coupon come from
 // the cached snapshot (constants fallback).
 import type { Metadata } from "next";
@@ -10,12 +10,13 @@ import { getPricingSnapshot } from "@/lib/marketing-data";
 import { PricingSection } from "@/components/pricing/PricingSection";
 import {
   EXTRA_JURORS_LINE,
+  ONE_DISCOUNT_LINE,
   TIER_LABEL,
   TIER_ORDER,
   UPGRADE_CREDIT_LINE,
   VERDICT_LAUNCH_NOTE,
   buildTierViews,
-  couponEndsLabel,
+  couponAdLine,
   featureRows,
   tierPrice,
   usd,
@@ -46,7 +47,7 @@ export default async function PricingPage() {
     <main id="main">
       <JsonLd
         data={[
-          productOffersLd(prices),
+          productOffersLd(prices, coupon),
           faqLd(PRICING_FAQ.map(({ q, aText }) => ({ q, aText }))),
           breadcrumbLd([
             { name: "Home", path: "/" },
@@ -75,7 +76,7 @@ export default async function PricingPage() {
             columns={TIER_ORDER.map((t) => TIER_LABEL[t])}
             rows={featureRows(views)}
             highlightColumn={TIER_ORDER.indexOf("proof")}
-            footnote="“—” means it isn’t part of that package. The HALF code, while it runs, is shown on the Verdict card above."
+            footnote="“—” means it isn’t part of that package. The launch code, while it runs, is shown on the Verdict card above."
           />
         </div>
       </section>
@@ -86,12 +87,13 @@ export default async function PricingPage() {
             Your first Verdict for {usd(verdictCouponPrice(prices, coupon))} with code {coupon.code}
           </h2>
           <p className={p.blockLede}>
-            Through {couponEndsLabel(coupon.endsAt)}, code {coupon.code} takes your first Verdict from {usd(verdictPrice)}{" "}
-            to {usd(verdictCouponPrice(prices, coupon))}. It&rsquo;s one per customer (the first Verdict for your email),
-            it applies to the Verdict price only (extra jurors stay {usd(EXTRA_JUROR_USD)} each), and it works together
-            with the Quick Read upgrade credit: {usd(verdictCouponPrice(prices, coupon))} − {usd(quickReadPrice)} ={" "}
-            {usd(Math.max(0, verdictCouponPrice(prices, coupon) - quickReadPrice))}. Arrive with a link that carries the
-            code, or type it in &ldquo;Have a code?&rdquo;.
+            {couponAdLine(prices, coupon)} Code {coupon.code} takes your first Verdict from {usd(verdictPrice)} to{" "}
+            {usd(verdictCouponPrice(prices, coupon))}. It&rsquo;s one per customer (the first Verdict for your email)
+            and it applies to the Verdict price only (extra jurors stay {usd(EXTRA_JUROR_USD)} each). It doesn&rsquo;t
+            combine with the Quick Read upgrade credit: if both could apply, checkout applies the bigger saving
+            ({coupon.code} takes {usd(verdictPrice - verdictCouponPrice(prices, coupon))} off; the credit takes{" "}
+            {usd(quickReadPrice)} off) and tells you which one it used. Arrive with a link that carries the code, or type
+            it in &ldquo;Have a code?&rdquo;.
           </p>
         </section>
       ) : null}
@@ -114,7 +116,7 @@ export default async function PricingPage() {
         <p className={p.blockLede}>
           {UPGRADE_CREDIT_LINE} Upgrade from the link in your Quick Read report within {UPGRADE_CREDIT_HOURS} hours of
           paying, and the {usd(quickReadPrice)} you paid comes off the Verdict automatically: you pay{" "}
-          {usd(Math.max(0, verdictPrice - quickReadPrice))} instead of {usd(verdictPrice)}.
+          {usd(Math.max(0, verdictPrice - quickReadPrice))} instead of {usd(verdictPrice)}. {ONE_DISCOUNT_LINE}
         </p>
       </section>
 

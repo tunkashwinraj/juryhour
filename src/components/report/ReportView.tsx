@@ -3,7 +3,7 @@
 import type { Card } from "@/lib/types";
 import { REPORT_CAVEAT, RETEST_WINDOW_DAYS, TIERS, UPGRADE_CREDIT_HOURS } from "@/lib/constants";
 import { supportEmail } from "@/lib/seo";
-import { couponPrice, type PublicCoupon } from "@/lib/coupons";
+import { couponEndsLabel, couponPrice, type PublicCoupon } from "@/lib/coupons";
 import { orderRef } from "@/lib/order-ref";
 import type { JurorRow, ReportData } from "@/lib/queries";
 import { SandboxBadge } from "@/components/SiteHeader";
@@ -398,15 +398,13 @@ function SparkUpgrade({
       )}
       {coupon && couponDue !== null ? (
         <p>
-          First Verdict? Code {coupon.code} makes it <strong className="num">{usd(couponDue)}</strong>
-          {c.eligible ? (
-            <>
-              {" "}
-              and your {usd(c.credit)} still counts:{" "}
-              <strong className="num">{usd(Math.max(0, couponDue - c.credit))}</strong>
-            </>
-          ) : null}
-          . Enter it in &ldquo;Have a code?&rdquo; at checkout.
+          {coupon.percentOff}% off your first Verdict with code {coupon.code} until {couponEndsLabel(coupon.endsAt)} →{" "}
+          <strong className="num">{usd(couponDue)}</strong>. Enter it in &ldquo;Have a code?&rdquo; at checkout.
+          {c.eligible
+            ? ` The code and your credit don't combine: checkout applies the bigger saving (${
+                couponDue <= c.due ? `${coupon.code}, ${usd(couponDue)}` : `your credit, ${usd(c.due)}`
+              }).`
+            : null}
         </p>
       ) : null}
       <a className="btn btn-primary" href={`/?tier=proof&parent=${data.orderId}#preview`}>

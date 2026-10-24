@@ -37,7 +37,7 @@ export function tierRefundRows(): TierRefundRow[] {
 export function proRataExample() {
   const price = TIERS.proof.price;
   const requested = TIERS.proof.jurors;
-  const approved = TIERS.proof.minJurors + 2;
+  const approved = Math.max(TIERS.proof.minJurors, requested - 2);
   return { price, requested, approved, refund: proRataRefund(price, requested, approved) };
 }
 

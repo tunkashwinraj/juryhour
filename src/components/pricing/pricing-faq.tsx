@@ -1,6 +1,7 @@
 // Pricing FAQ for /pricing (FAQPage JSON-LD uses aText). Matches the code rules: two plans, extra
-// jurors at $7, the HALF coupon (first Verdict, combines with the Quick Read credit), partner codes are
-// attribution only. Dates come from the default HALF config (update with COUPON_HALF_ENDS_AT).
+// jurors at $16, the LAUNCH20 coupon (first Verdict; one discount per order, so it never combines with the
+// Quick Read credit and checkout applies the bigger saving), partner codes are attribution only. Dates come
+// from the default LAUNCH20 config (update with COUPON_LAUNCH20_ENDS_AT).
 import Link from "next/link";
 import {
   EXTRA_JUROR_USD,
@@ -10,15 +11,22 @@ import {
   VERDICT_REGULAR_FROM,
   VERDICT_REGULAR_USD,
 } from "@/lib/constants";
-import { HALF_DEFAULT, couponPrice } from "@/lib/coupons";
+import { LAUNCH20_DEFAULT, bestVerdictDiscount, couponPrice } from "@/lib/coupons";
 import { couponEndsLabel } from "@/components/pricing/pricing-data";
 import type { FaqItem } from "@/components/marketing/home-content";
 
 const QR = TIERS.spark.price;
 const VERDICT = TIERS.proof.price;
-const C = HALF_DEFAULT;
+const C = LAUNCH20_DEFAULT;
 const C_PRICE = couponPrice(VERDICT, C.percentOff);
+const C_OFF = VERDICT - C_PRICE;
 const C_ENDS = couponEndsLabel(C.endsAt);
+/** Both a code and the credit: only the bigger saving applies. */
+const BEST = bestVerdictDiscount({ listUsd: VERDICT, coupon: C, creditUsd: QR });
+const BEST_TEXT =
+  BEST.kind === "coupon"
+    ? `${C.code} ($${C_OFF} off) beats the $${QR} credit, so you pay $${BEST.baseUsd}`
+    : `the $${QR} credit beats ${C.code} ($${C_OFF} off), so you pay $${BEST.baseUsd}`;
 
 export const PRICING_FAQ: FaqItem[] = [
   {
@@ -50,13 +58,14 @@ export const PRICING_FAQ: FaqItem[] = [
   },
   {
     q: `How does the ${C.code} code work?`,
-    aText: `${C.code} takes your first Verdict from $${VERDICT} to $${C_PRICE}, through ${C_ENDS}. It's one per customer (the first Verdict for your email), it applies to the Verdict price only (not extra jurors), and it works with the Quick Read upgrade credit ($${C_PRICE} − $${QR} = $${C_PRICE - QR}). Arrive with a link that carries the code or type it in "Have a code?"; checkout shows the price before you pay.`,
+    aText: `${C.percentOff}% off your first Verdict with code ${C.code} until ${C_ENDS} → $${C_PRICE} (instead of $${VERDICT}). It's one per customer (the first Verdict for your email) and applies to the Verdict price only (not extra jurors). It doesn't combine with the Quick Read upgrade credit: checkout applies whichever saves you more (${BEST_TEXT}). Arrive with a link that carries the code or type it in "Have a code?"; checkout shows the price before you pay.`,
     a: (
       <p>
-        {C.code} takes your first Verdict from ${VERDICT} to ${C_PRICE}, through {C_ENDS}. It&rsquo;s one per customer
-        (the first Verdict for your email), it applies to the Verdict price only (not extra jurors), and it works with
-        the Quick Read upgrade credit (${C_PRICE} − ${QR} = ${C_PRICE - QR}). Arrive with a link that carries the code
-        or type it in &ldquo;Have a code?&rdquo;; checkout shows the price before you pay.
+        {C.percentOff}% off your first Verdict with code {C.code} until {C_ENDS} → ${C_PRICE} (instead of ${VERDICT}).
+        It&rsquo;s one per customer (the first Verdict for your email) and applies to the Verdict price only (not extra
+        jurors). It doesn&rsquo;t combine with the Quick Read upgrade credit: checkout applies whichever saves you more
+        ({BEST_TEXT}). Arrive with a link that carries the code or type it in &ldquo;Have a code?&rdquo;; checkout shows
+        the price before you pay.
       </p>
     ),
   },
@@ -82,12 +91,12 @@ export const PRICING_FAQ: FaqItem[] = [
   },
   {
     q: "Can I upgrade from a Quick Read?",
-    aText: `Yes. Your $${QR} counts toward a Verdict for ${UPGRADE_CREDIT_HOURS} hours: upgrade from the link in your Quick Read report and you pay $${VERDICT - QR} instead of $${VERDICT} (or $${C_PRICE - QR} with ${C.code} on your first Verdict).`,
+    aText: `Yes. Your $${QR} counts toward a Verdict for ${UPGRADE_CREDIT_HOURS} hours: upgrade from the link in your Quick Read report and you pay $${VERDICT - QR} instead of $${VERDICT}. The credit doesn't combine with ${C.code}; with the code on your first Verdict, ${BEST_TEXT}.`,
     a: (
       <p>
         Yes. Your ${QR} counts toward a Verdict for {UPGRADE_CREDIT_HOURS} hours: upgrade from the link in your Quick
-        Read report and you pay ${VERDICT - QR} instead of ${VERDICT} (or ${C_PRICE - QR} with {C.code} on your first
-        Verdict).
+        Read report and you pay ${VERDICT - QR} instead of ${VERDICT}. The credit doesn&rsquo;t combine with {C.code};
+        with the code on your first Verdict, {BEST_TEXT}.
       </p>
     ),
   },

@@ -1,7 +1,8 @@
 // Pure pricing content for PricingSection and /pricing (docs/WEBSITE_SPEC.md §5.7). No I/O, no React.
-// Pricing v3 (founder decision 2026-10): exactly two public plans — Quick Read $11 and Verdict ($299
-// launch offer · regular $499 from Dec 1) [recommended] — plus extra jurors at $7 each and the HALF
-// coupon (first Verdict). Retest is sold only from a delivered Verdict report, never on pricing pages.
+// Pricing v4 (founder decision 2026-10, real Terac juror cost): exactly two public plans — Quick Read $49
+// (3 people) and Verdict ($299 launch offer · regular $499 from Dec 1, 15 people) [recommended] — plus
+// extra jurors at $16 each and the LAUNCH20 coupon (20% off the first Verdict → $239; never combined with
+// the Quick Read credit). Retest ($129) is sold only from a delivered Verdict report, never on pricing pages.
 import {
   EXTRA_JUROR_USD,
   MAX_EXTRA_JURORS,
@@ -85,15 +86,24 @@ export const UPGRADE_CREDIT_LINE = `Your ${usd(TIERS.spark.price)} counts toward
 
 export const EXTRA_JURORS_LINE = `Add up to ${MAX_EXTRA_JURORS} extra jurors to a Quick Read or Verdict at ${usd(EXTRA_JUROR_USD)} each.`;
 
-/** Verdict price with the coupon (whole dollars, rounded down: $299 → $149). */
+/** Verdict price with the coupon (whole dollars, rounded down: $299 → $239). */
 export function verdictCouponPrice(prices: PriceMap, coupon: PublicCoupon): number {
   return couponPrice(tierPrice("proof", prices), coupon.percentOff);
 }
 
-/** "First Verdict? Code HALF makes it $149 through Nov 30." */
-export function couponAdLine(prices: PriceMap, coupon: PublicCoupon): string {
-  return `First Verdict? Code ${coupon.code} makes it ${usd(verdictCouponPrice(prices, coupon))} through ${couponEndsLabel(coupon.endsAt)}.`;
+/** "20% off your first Verdict with code LAUNCH20 until Nov 30 → $239." for a Verdict list price. */
+export function couponAdText(verdictPrice: number, coupon: PublicCoupon): string {
+  return `${coupon.percentOff}% off your first Verdict with code ${coupon.code} until ${couponEndsLabel(coupon.endsAt)} → ${usd(couponPrice(verdictPrice, coupon.percentOff))}.`;
 }
+
+/** couponAdText for the current prices. */
+export function couponAdLine(prices: PriceMap, coupon: PublicCoupon): string {
+  return couponAdText(tierPrice("proof", prices), coupon);
+}
+
+/** One discount per order (same rule as /api/checkout). */
+export const ONE_DISCOUNT_LINE =
+  "One discount per order: a code and the Quick Read upgrade credit don't combine, and checkout applies whichever saves you more.";
 
 /** "2h 14m" for a duration in minutes. */
 export function formatDuration(minutes: number): string {

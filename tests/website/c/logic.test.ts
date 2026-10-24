@@ -262,7 +262,7 @@ describe("display prices", () => {
   it("server price, else the constant", () => {
     expect(displayPrice("proof", { proof: 279 })).toBe(279);
     expect(displayPrice("proof", undefined)).toBe(299);
-    expect(displayPrice("retest", {})).toBe(59);
+    expect(displayPrice("retest", {})).toBe(129);
     expect(displayPrice("specialist", undefined)).toBeNull();
   });
 });

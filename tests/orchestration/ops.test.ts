@@ -146,10 +146,10 @@ describe("submit_test", () => {
     const r = await call("submit_test", testBody(o.id));
     expect(r.body).toMatchObject({ ok: true, data: { priced: true } });
     expect(row("orders", o.id).stage).toBe("QUOTING");
-    expect(fake.rows("panels")[0]).toMatchObject({ status: "priced", requested_n: 20, terac_feasibility_id: null });
+    expect(fake.rows("panels")[0]).toMatchObject({ status: "priced", requested_n: 15, terac_feasibility_id: null });
     expect(fake.rows("panels")[0].terac_opportunity_id).toMatch(/^opp_/);
     expect(m.requestQuote).not.toHaveBeenCalled();
-    expect(m.createOpportunity).toHaveBeenCalledWith(expect.objectContaining({ numParticipants: 20 }));
+    expect(m.createOpportunity).toHaveBeenCalledWith(expect.objectContaining({ numParticipants: 15 }));
     expect(m.createOpportunity.mock.calls[0][0].feasibilityRequestId).toBeUndefined();
     expect(String(m.createOpportunity.mock.calls[0][0].description).toLowerCase()).not.toContain("ledgerly");
     expect(fake.rows("agent_runs")[0].status).toBe("completed");
@@ -170,9 +170,9 @@ describe("submit_test", () => {
     expect(fake.rows("panels").find((p) => p.order_id === o.id)).toMatchObject({ requested_n: 8 });
   });
   it("extra jurors raise the quoted panel size", async () => {
-    const o = researching({ extra_jurors: 5, price_usd: 299 + 35 });
+    const o = researching({ extra_jurors: 5, price_usd: 299 + 80 });
     expect((await call("submit_test", testBody(o.id))).body).toMatchObject({ ok: true });
-    expect(fake.rows("panels").find((p) => p.order_id === o.id)).toMatchObject({ requested_n: 25 });
+    expect(fake.rows("panels").find((p) => p.order_id === o.id)).toMatchObject({ requested_n: 20 });
   });
   it("card_b forbidden for spark/pulse", async () =>
     await refused("submit_test", testBody(researching({ tier: "pulse", price_usd: 49 }).id), "card_b_forbidden"));
@@ -246,8 +246,8 @@ describe("launch_panel (every SPEC §12 check)", () => {
   it("success → opportunity created + launched, panel live, PANEL_LIVE", async () => {
     const { o, p } = quoting();
     const r = await call("launch_panel", launch(o));
-    expect(r.body).toMatchObject({ ok: true, data: { n: 20, budget_usd: 80 } });
-    expect(m.createOpportunity).toHaveBeenCalledWith(expect.objectContaining({ numParticipants: 20, screeningQuestions: PROFILE.screening_questions, filters: [] }));
+    expect(r.body).toMatchObject({ ok: true, data: { n: 15, budget_usd: 60 } });
+    expect(m.createOpportunity).toHaveBeenCalledWith(expect.objectContaining({ numParticipants: 15, screeningQuestions: PROFILE.screening_questions, filters: [] }));
     expect(row("panels", p.id).status).toBe("live");
     expect(row("orders", o.id).stage).toBe("PANEL_LIVE");
   });
@@ -263,22 +263,22 @@ describe("launch_panel (every SPEC §12 check)", () => {
   });
   it("quote_not_ready", async () => await refused("launch_panel", launch(quoting({ panel: { status: "quoting", cost_per_participant: null } }).o), "quote_not_ready", 409));
   it("quote_infeasible", async () => await refused("launch_panel", launch(quoting({ panel: { status: "infeasible" } }).o), "quote_infeasible"));
-  it("infeasible_cost (cpi 3× cap)", async () => await refused("launch_panel", launch(quoting({ panel: { cost_per_participant: 12 } }).o), "infeasible_cost", 422));
+  it("infeasible_cost (cpi 3× cap)", async () => await refused("launch_panel", launch(quoting({ panel: { cost_per_participant: 32 } }).o), "infeasible_cost", 422));
   it("n within [minJurors, jurors]", async () => {
-    await refused("launch_panel", launch(quoting().o, 13), "n_out_of_range");
-    await refused("launch_panel", launch(quoting().o, 21), "n_out_of_range");
+    await refused("launch_panel", launch(quoting().o, 9), "n_out_of_range");
+    await refused("launch_panel", launch(quoting().o, 16), "n_out_of_range");
   });
-  it("cpi·n ≤ cap", async () => await refused("launch_panel", launch(quoting({ panel: { cost_per_participant: 5 } }).o, 17), "over_cost_cap"));
+  it("cpi·n ≤ cap", async () => await refused("launch_panel", launch(quoting({ panel: { cost_per_participant: 12 } }).o, 14), "over_cost_cap"));
   it("margin ≥ 30%", async () => await refused("launch_panel", launch(quoting({ order: { price_usd: 80 } }).o), "margin_too_low"));
   it("launch budget ≥ $5", async () =>
-    await refused("launch_panel", launch(quoting({ order: { tier: "spark", price_usd: 11 }, panel: { cost_per_participant: 1.5, requested_n: 3 } }).o), "budget_below_minimum"));
+    await refused("launch_panel", launch(quoting({ order: { tier: "spark", price_usd: 49 }, panel: { cost_per_participant: 1.5, requested_n: 3 } }).o), "budget_below_minimum"));
   it("Terac balance covers", async () => {
     m.getTeracContext.mockResolvedValue({ balanceDollars: 20 });
     await refused("launch_panel", launch(quoting().o), "insufficient_terac_balance");
     expect(m.createOpportunity).not.toHaveBeenCalled();
   });
   it("Terac's own total must pass the cap (no launch)", async () => {
-    m.createOpportunity.mockResolvedValue({ id: "opp_x", totalCostCents: 9000, costPerParticipantCents: 600, affordable: true });
+    m.createOpportunity.mockResolvedValue({ id: "opp_x", totalCostCents: 20000, costPerParticipantCents: 1334, affordable: true });
     const { o, p } = quoting();
     await refused("launch_panel", launch(o), "terac_cost_mismatch");
     expect(m.launchOpportunity).not.toHaveBeenCalled();
@@ -293,10 +293,10 @@ describe("launch_panel (every SPEC §12 check)", () => {
     expect(m.createOpportunity).toHaveBeenCalledTimes(1); // draft reused
   });
   it("shrink: procurement launches a smaller n within the cap", async () => {
-    terac.cpi = 5;
-    const { o } = quoting({ panel: { cost_per_participant: 5 } });
-    const r = await call("launch_panel", launch(o, 16));
-    expect(r.body).toMatchObject({ ok: true, data: { n: 16 } });
+    terac.cpi = 12;
+    const { o } = quoting({ order: { price_usd: 299 }, panel: { cost_per_participant: 12 } });
+    const r = await call("launch_panel", launch(o, 13));
+    expect(r.body).toMatchObject({ ok: true, data: { n: 13 } });
   });
 });
 

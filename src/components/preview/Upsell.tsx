@@ -1,14 +1,16 @@
 "use client";
 // The step after a preview (WEBSITE_SPEC §7.3): compact tier cards — Quick Read and Verdict
 // [VERDICT_BADGE], or Retest + Verdict when arriving from the link in a Verdict report
-// (?tier=retest&parent=<order id>) — an extra-jurors stepper ($7 each, 0–20) with live totals, the code
-// field (HALF or a referral code), and the capacity state.
+// (?tier=retest&parent=<order id>) — an extra-jurors stepper ($16 each, 0–20) with live totals, the code
+// field (LAUNCH20 or a referral code), and the capacity state. On a Quick Read upgrade link
+// (?tier=proof&parent=<order id>) the Verdict card says which single discount checkout will apply: the
+// code and the upgrade credit never combine (bestVerdictDiscount, same rule as /api/checkout).
 // Prices come from the server via props (HeroPreview `prices`); /api/checkout re-checks everything.
 import { useId } from "react";
 import { Badge, Banner, Card } from "@/components/ui";
 import { EXTRA_JUROR_USD, MAX_EXTRA_JURORS, TIERS, UPGRADE_CREDIT_HOURS, VERDICT_BADGE } from "@/lib/constants";
 import { VERDICT_LAUNCH_NOTE, couponEndsLabel } from "@/components/pricing/pricing-data";
-import { couponPrice } from "@/lib/coupons";
+import { bestVerdictDiscount, couponPrice } from "@/lib/coupons";
 import { usd } from "@/components/rules";
 import { CouponCodeField } from "./CouponCodeField";
 import { TIER_LABELS, allowsExtraJurors, clampExtraJurors, displayPrice, type CtaTier, type PriceMap } from "./logic";
@@ -55,6 +57,8 @@ export function Upsell({
   const tiers: CtaTier[] = wantsRetest ? ["retest", "proof"] : ["spark", "proof"];
   const emphasized: CtaTier = wantsRetest ? "retest" : ctx.selectedTier && tiers.includes(ctx.selectedTier) ? ctx.selectedTier : "proof";
   const quickReadPrice = displayPrice("spark", prices) ?? TIERS.spark.price;
+  // Upgrade link from a Quick Read report: the credit may apply (the server checks the 24h window).
+  const upgrading = !wantsRetest && Boolean(ctx.parentOrderId);
   const extra = ctx.extraJurors;
   const extraUsd = extra * EXTRA_JUROR_USD;
 
@@ -72,7 +76,12 @@ export function Upsell({
         {tiers.map((t) => {
           const list = displayPrice(t, prices);
           const applied = ctx.appliedCoupon(t);
-          const base = list !== null && applied ? couponPrice(list, applied.percentOff) : list;
+          // Code + upgrade link: show which single discount checkout will apply.
+          const best =
+            t === "proof" && upgrading && list !== null && applied
+              ? bestVerdictDiscount({ listUsd: list, coupon: applied, creditUsd: quickReadPrice })
+              : null;
+          const base = best ? best.baseUsd : list !== null && applied ? couponPrice(list, applied.percentOff) : list;
           const extras = allowsExtraJurors(t);
           const isEm = t === emphasized;
           const advertised = !applied && ctx.coupon && ctx.coupon.tier === t && list !== null ? ctx.coupon : null;
@@ -85,7 +94,9 @@ export function Upsell({
                 </div>
                 <p className={styles.tierPrice}>
                   {usd(base)}
-                  {applied ? (
+                  {best?.kind === "credit" ? (
+                    <span className={styles.compareAt}> with your Quick Read credit</span>
+                  ) : applied ? (
                     <span className={styles.compareAt}> with {applied.code} · first Verdict</span>
                   ) : t === "proof" ? (
                     <span className={styles.compareAt}> {VERDICT_LAUNCH_NOTE}</span>
@@ -101,10 +112,23 @@ export function Upsell({
                   {extras ? `${TIERS[t as "spark" | "proof" | "retest"].jurors + extra} real people · ` : null}
                   {SUMMARY[t]}
                 </p>
+                {best && applied ? (
+                  <p className={styles.small}>
+                    {best.kind === "coupon"
+                      ? `${applied.code} (${usd(best.couponUsd)} off) saves more than your Quick Read credit (${usd(quickReadPrice)}). They don't combine, so checkout applies ${applied.code}.`
+                      : `Your Quick Read credit (${usd(best.creditUsd)} off) saves more than ${applied.code}. They don't combine, so checkout applies the credit.`}
+                  </p>
+                ) : t === "proof" && upgrading ? (
+                  <p className={styles.small}>
+                    Your {usd(quickReadPrice)} Quick Read comes off this Verdict at checkout if you paid for it in the last{" "}
+                    {UPGRADE_CREDIT_HOURS} hours.
+                  </p>
+                ) : null}
                 {advertised && list !== null ? (
                   <p className={styles.small}>
-                    First Verdict? {usd(couponPrice(list, advertised.percentOff))} with code {advertised.code} through{" "}
-                    {couponEndsLabel(advertised.endsAt)}.
+                    {advertised.percentOff}% off your first Verdict with code {advertised.code} until{" "}
+                    {couponEndsLabel(advertised.endsAt)} → {usd(couponPrice(list, advertised.percentOff))}
+                    {upgrading ? ". It doesn't combine with your Quick Read credit; checkout applies the bigger saving." : "."}
                   </p>
                 ) : null}
                 <TierCta tier={t} variant={isEm ? "primary" : "secondary"} />
@@ -161,7 +185,7 @@ export function Upsell({
       <p className={styles.small}>
         {wantsRetest
           ? "Your updated page goes to a new jury, against a fresh rewrite. Use the same email as your Verdict."
-          : `Start with a Quick Read? Your ${usd(quickReadPrice)} counts toward a Verdict for ${UPGRADE_CREDIT_HOURS} hours, and it works with the first-Verdict code.`}
+          : `Start with a Quick Read? Your ${usd(quickReadPrice)} counts toward a Verdict for ${UPGRADE_CREDIT_HOURS} hours. One discount per order: the credit and a code don't combine, and checkout applies the bigger saving.`}
       </p>
 
       <div className={styles.codeRow}>

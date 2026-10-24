@@ -24,7 +24,7 @@ vi.mock("@/lib/whop", () => {
 const { POST: checkout } = await import("@/app/api/checkout/route");
 const { POST: quote } = await import("@/app/api/quote/route");
 const { resetEnvCache } = await import("@/lib/env");
-const TIER_JURORS: Record<string, number> = { spark: 3, proof: 20, retest: 8 };
+const TIER_JURORS: Record<string, number> = { spark: 3, proof: 15, retest: 8 };
 
 type Mocked = ReturnType<typeof vi.fn>;
 const m = (x: unknown) => x as Mocked;
@@ -39,7 +39,7 @@ type State = {
   parent: Record<string, unknown> | null;
   parentUsed: number;
   retestsUsed: number;
-  /** Paid Verdicts already on this email + mode (HALF is first-Verdict only). */
+  /** Paid Verdicts already on this email + mode (LAUNCH20 is first-Verdict only). */
   priorVerdicts: number;
   preview: { id: string; safety_verdict: string } | null;
 };
@@ -81,10 +81,10 @@ beforeEach(() => {
   state = {
     paused: false,
     prices: [
-      { tier: "spark", current_usd: 11 },
+      { tier: "spark", current_usd: 49 },
       { tier: "pulse", current_usd: 49 },
       { tier: "proof", current_usd: "299.00" },
-      { tier: "retest", current_usd: 59 },
+      { tier: "retest", current_usd: 129 },
       { tier: "launch_pack", current_usd: 199 },
     ],
     parent: null,
@@ -173,19 +173,19 @@ describe("POST /api/checkout — retest", () => {
     return (await res.json()) as { ok: boolean; code: string; error: string };
   };
 
-  it("happy path: $59 order linked to the Verdict, no credit, no retest flag", async () => {
+  it("happy path: $129 order linked to the Verdict, no credit, no retest flag", async () => {
     state.parent = deliveredVerdict();
     const res = await post(checkout, RETEST);
     expect(res.status).toBe(200);
     expect(inserted()).toMatchObject({
       tier: "retest",
       addons: [],
-      price_usd: 59,
+      price_usd: 129,
       url: "https://example.com/v2",
       parent_order_id: PARENT_ID,
       retest_available: false,
     });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 59, title: "Retest · JH-33333333" });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 129, title: "Retest · JH-33333333" });
     expect(h.logEvent).toHaveBeenCalledWith(
       expect.objectContaining({ action: "checkout_created", reasoning: `retest of ${PARENT_ID}`, payload: expect.objectContaining({ tier: "retest", credit_usd: 0 }) }),
     );
@@ -203,19 +203,19 @@ describe("POST /api/checkout — retest", () => {
 
   it("uses the CEO-adjusted retest price", async () => {
     state.parent = deliveredVerdict();
-    state.prices = [{ tier: "retest", current_usd: 62 }];
+    state.prices = [{ tier: "retest", current_usd: 139 }];
     await post(checkout, RETEST);
-    expect(inserted()).toMatchObject({ price_usd: 62 });
+    expect(inserted()).toMatchObject({ price_usd: 139 });
   });
 
-  it("a Retest can carry extra jurors; HALF doesn't apply to it", async () => {
+  it("a Retest can carry extra jurors; LAUNCH20 doesn't apply to it", async () => {
     state.parent = deliveredVerdict();
     const res = await post(checkout, { ...RETEST, extra_jurors: 4 });
     expect(res.status).toBe(200);
-    expect(inserted()).toMatchObject({ tier: "retest", price_usd: 59 + 28, extra_jurors: 4 });
+    expect(inserted()).toMatchObject({ tier: "retest", price_usd: 129 + 64, extra_jurors: 4 });
     m(h.createCheckout).mockClear();
     h.fake = createFakeDb(respond);
-    expect((await refusal({ ...RETEST, coupon: "HALF" })).code).toBe("coupon_not_applicable");
+    expect((await refusal({ ...RETEST, coupon: "LAUNCH20" })).code).toBe("coupon_not_applicable");
   });
 
   it("retest_needs_parent without parent_order_id (before any DB read)", async () => {
@@ -266,60 +266,74 @@ describe("POST /api/checkout — retest", () => {
   });
 });
 
-describe("POST /api/checkout — coupon HALF", () => {
+describe("POST /api/checkout — coupon LAUNCH20", () => {
   afterEach(() => {
-    delete process.env.COUPON_HALF_ENDS_AT;
+    delete process.env.COUPON_LAUNCH20_ENDS_AT;
   });
   const at = (iso: string) => vi.useFakeTimers({ now: new Date(iso), toFake: ["Date"] });
   const firstVerdictLookup = () =>
     (h.fake!.calls as DbCall[]).find((c) => c.table === "orders" && c.op === "select" && filterValue(c, "email"));
+  const quickReadParent = () => ({
+    id: PARENT_ID,
+    tier: "spark",
+    price_usd: "49.00",
+    paid_at: new Date(Date.now() - 3600_000).toISOString(),
+    email: "founder@example.com",
+    mode: "sandbox",
+  });
 
-  it("happy path: explicit HALF → first Verdict $149, stored as promo_code, titled with the code", async () => {
+  it("happy path: explicit LAUNCH20 → first Verdict $239, stored as promo_code, titled with the ref", async () => {
     at("2026-11-10T12:00:00Z");
-    const res = await post(checkout, { ...VALID, coupon: "half" });
+    const res = await post(checkout, { ...VALID, coupon: "launch20" });
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ ok: true, price_usd: 149, coupon_applied: "HALF", credit_usd: 0 });
-    expect(inserted()).toMatchObject({ tier: "proof", price_usd: 149, promo_code: "HALF" });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 149, title: "Verdict · JH-33333333" });
+    expect(await res.json()).toMatchObject({
+      ok: true, price_usd: 239, coupon_applied: "LAUNCH20", credit_usd: 0, discount_applied: "coupon", discount_note: "LAUNCH20 applied ($60 off).",
+    });
+    expect(inserted()).toMatchObject({ tier: "proof", price_usd: 239, promo_code: "LAUNCH20" });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 239, title: "Verdict · JH-33333333" });
     // first-Verdict check: paid proof orders for this email + mode
     const q = firstVerdictLookup()!;
     expect([filterValue(q, "email"), filterValue(q, "mode"), filterValue(q, "tier")]).toEqual(["founder@example.com", "sandbox", "proof"]);
     expect(q.filters).toContainEqual(["not.is", "paid_at", null]);
   });
 
-  it("auto-applies from ?code=HALF (attribution code)", async () => {
+  it("auto-applies from ?code=LAUNCH20&src=<channel> (attribution code)", async () => {
     at("2026-11-10T12:00:00Z");
-    await post(checkout, { ...VALID, code: "HALF", src: "reddit" });
-    expect(inserted()).toMatchObject({ price_usd: 149, promo_code: "HALF", src: "reddit" });
+    await post(checkout, { ...VALID, code: "LAUNCH20", src: "reddit" });
+    expect(inserted()).toMatchObject({ price_usd: 239, promo_code: "LAUNCH20", src: "reddit" });
   });
 
-  it("an attribution HALF that can't apply is attribution only (no refusal)", async () => {
+  it("an attribution LAUNCH20 that can't apply is attribution only (no refusal)", async () => {
     at("2026-11-10T12:00:00Z");
-    await post(checkout, { ...VALID, tier: "spark", code: "HALF" });
-    expect(inserted()).toMatchObject({ tier: "spark", price_usd: 11, promo_code: "HALF" });
+    await post(checkout, { ...VALID, tier: "spark", code: "LAUNCH20" });
+    expect(inserted()).toMatchObject({ tier: "spark", price_usd: 49, promo_code: "LAUNCH20" });
     h.fake = createFakeDb(respond);
     state.priorVerdicts = 1;
-    await post(checkout, { ...VALID, code: "HALF" });
-    expect(inserted()).toMatchObject({ price_usd: 299, promo_code: "HALF" });
+    await post(checkout, { ...VALID, code: "LAUNCH20" });
+    expect(inserted()).toMatchObject({ price_usd: 299, promo_code: "LAUNCH20" });
     h.fake = createFakeDb(respond);
     state.priorVerdicts = 0;
     at("2026-12-02T00:00:00Z");
-    await post(checkout, { ...VALID, code: "HALF" });
-    expect(inserted()).toMatchObject({ price_usd: 299, promo_code: "HALF" });
+    await post(checkout, { ...VALID, code: "LAUNCH20" });
+    expect(inserted()).toMatchObject({ price_usd: 299, promo_code: "LAUNCH20" });
   });
 
-  it("partner codes never change the price", async () => {
+  it("partner codes (and the retired HALF as an attribution code) never change the price", async () => {
     at("2026-11-10T12:00:00Z");
     await post(checkout, { ...VALID, code: "whop" });
     expect(inserted()).toMatchObject({ price_usd: 299, promo_code: "WHOP" });
+    h.fake = createFakeDb(respond);
+    await post(checkout, { ...VALID, code: "HALF" });
+    expect(inserted()).toMatchObject({ price_usd: 299, promo_code: "HALF" });
   });
 
   it.each<[string, Record<string, unknown>, string, number, string]>([
     ["unknown code", { coupon: "LOVABLE" }, "2026-11-10T12:00:00Z", 0, "coupon_unknown"],
     ["the retired TODAY50", { coupon: "TODAY50" }, "2026-10-25T12:00:00Z", 0, "coupon_unknown"],
-    ["expired at the end of Nov 30 ET", { coupon: "HALF" }, "2026-12-01T05:00:00Z", 0, "coupon_expired"],
-    ["Quick Read", { coupon: "HALF", tier: "spark" }, "2026-11-10T12:00:00Z", 0, "coupon_not_applicable"],
-    ["returning Verdict customer", { coupon: "HALF" }, "2026-11-10T12:00:00Z", 1, "coupon_already_used"],
+    ["the retired HALF", { coupon: "HALF" }, "2026-11-10T12:00:00Z", 0, "coupon_unknown"],
+    ["expired at the end of Nov 30 ET", { coupon: "LAUNCH20" }, "2026-12-01T05:00:00Z", 0, "coupon_expired"],
+    ["Quick Read", { coupon: "LAUNCH20", tier: "spark" }, "2026-11-10T12:00:00Z", 0, "coupon_not_applicable"],
+    ["returning Verdict customer", { coupon: "LAUNCH20" }, "2026-11-10T12:00:00Z", 1, "coupon_already_used"],
   ])("400 %s → %s", async (_n, over, now, prior, code) => {
     at(now);
     state.priorVerdicts = prior;
@@ -334,42 +348,61 @@ describe("POST /api/checkout — coupon HALF", () => {
 
   it("still valid one second before the end", async () => {
     at("2026-12-01T04:59:59Z");
-    expect((await post(checkout, { ...VALID, coupon: "HALF" })).status).toBe(200);
-    expect(inserted()).toMatchObject({ price_usd: 149 });
+    expect((await post(checkout, { ...VALID, coupon: "LAUNCH20" })).status).toBe(200);
+    expect(inserted()).toMatchObject({ price_usd: 239 });
   });
 
-  it("never discounts extra jurors: $149 + 10 × $7", async () => {
+  it("never discounts extra jurors: $239 + 10 × $16", async () => {
     at("2026-11-10T12:00:00Z");
-    await post(checkout, { ...VALID, coupon: "HALF", extra_jurors: 10 });
-    expect(inserted()).toMatchObject({ price_usd: 219, extra_jurors: 10 });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 219, title: "Verdict +10 · JH-33333333" });
+    await post(checkout, { ...VALID, coupon: "LAUNCH20", extra_jurors: 10 });
+    expect(inserted()).toMatchObject({ price_usd: 399, extra_jurors: 10 });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 399, title: "Verdict +10 · JH-33333333" });
   });
 
-  it("HALF + Quick Read credit = $138 (and + 20 extra jurors = $278, margin still ≥ 30%)", async () => {
+  it("does not stack with the Quick Read credit: the larger saving (LAUNCH20, $60 > $49) wins → $239, and the response says so", async () => {
     at("2026-11-10T12:00:00Z");
-    state.parent = { id: PARENT_ID, tier: "spark", price_usd: "11.00", paid_at: new Date(Date.now() - 3600_000).toISOString(), email: "founder@example.com", mode: "sandbox" };
-    const res = await post(checkout, { ...VALID, parent_order_id: PARENT_ID, coupon: "HALF" });
-    expect(await res.json()).toMatchObject({ ok: true, price_usd: 138, coupon_applied: "HALF", credit_usd: 11 });
-    expect(inserted()).toMatchObject({ price_usd: 138, promo_code: "HALF", parent_order_id: PARENT_ID });
+    state.parent = quickReadParent();
+    const res = await post(checkout, { ...VALID, parent_order_id: PARENT_ID, coupon: "LAUNCH20" });
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      price_usd: 239,
+      coupon_applied: "LAUNCH20",
+      credit_usd: 0,
+      discount_applied: "coupon",
+      discount_note: "LAUNCH20 applied ($60 off). It doesn't combine with your Quick Read credit ($49), so we used the bigger saving.",
+    });
+    expect(inserted()).toMatchObject({ price_usd: 239, promo_code: "LAUNCH20", parent_order_id: PARENT_ID });
     expect(h.logEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ action: "checkout_created", payload: expect.objectContaining({ coupon: "HALF", discount_usd: 150, credit_usd: 11 }) }),
+      expect.objectContaining({
+        action: "checkout_created",
+        payload: expect.objectContaining({ coupon: "LAUNCH20", discount_usd: 60, credit_usd: 0, discount_applied: "coupon", skipped_discount: { kind: "credit", code: null, usd: 49 } }),
+      }),
     );
     h.fake = createFakeDb(respond);
-    await post(checkout, { ...VALID, parent_order_id: PARENT_ID, coupon: "HALF", extra_jurors: 20 });
-    expect(inserted()).toMatchObject({ price_usd: 278, extra_jurors: 20 });
+    await post(checkout, { ...VALID, parent_order_id: PARENT_ID, coupon: "LAUNCH20", extra_jurors: 20 });
+    expect(inserted()).toMatchObject({ price_usd: 559, extra_jurors: 20 });
   });
 
-  it("env COUPON_HALF_ENDS_AT in the past switches HALF off", async () => {
+  it("the credit alone (no code) → $250, response says the credit was applied", async () => {
     at("2026-11-10T12:00:00Z");
-    process.env.COUPON_HALF_ENDS_AT = "2026-11-01T00:00:00Z";
-    const res = await post(checkout, { ...VALID, coupon: "HALF" });
+    state.parent = quickReadParent();
+    const res = await post(checkout, { ...VALID, parent_order_id: PARENT_ID });
+    expect(await res.json()).toMatchObject({
+      ok: true, price_usd: 250, coupon_applied: null, credit_usd: 49, discount_applied: "credit", discount_note: "Your Quick Read credit applied ($49 off).",
+    });
+  });
+
+  it("env COUPON_LAUNCH20_ENDS_AT in the past switches LAUNCH20 off", async () => {
+    at("2026-11-10T12:00:00Z");
+    process.env.COUPON_LAUNCH20_ENDS_AT = "2026-11-01T00:00:00Z";
+    const res = await post(checkout, { ...VALID, coupon: "LAUNCH20" });
     expect(await res.json()).toMatchObject({ code: "coupon_expired" });
   });
 
-  it("margin_too_low when HALF meets a CEO price at the bottom of the band", async () => {
+  it("margin_too_low when LAUNCH20 meets a CEO price below $295", async () => {
     at("2026-11-10T12:00:00Z");
-    state.prices = [{ tier: "proof", current_usd: 224.25 }];
-    const res = await post(checkout, { ...VALID, coupon: "HALF" });
+    state.prices = [{ tier: "proof", current_usd: 280 }];
+    const res = await post(checkout, { ...VALID, coupon: "LAUNCH20" });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ ok: false, code: "margin_too_low" });
     expect(inserted()).toBeUndefined();
@@ -378,8 +411,8 @@ describe("POST /api/checkout — coupon HALF", () => {
 
 describe("POST /api/checkout — extra jurors", () => {
   it.each<[string, number, number]>([
-    ["spark", 3, 11 + 21],
-    ["proof", 20, 299 + 140],
+    ["spark", 3, 49 + 48],
+    ["proof", 20, 299 + 320],
   ])("%s + %d extra jurors", async (tier, n, price) => {
     const res = await post(checkout, { ...VALID, tier, extra_jurors: n });
     expect(res.status).toBe(200);
@@ -430,6 +463,8 @@ describe("POST /api/checkout — business rules", () => {
       price_usd: 299,
       coupon_applied: null,
       credit_usd: 0,
+      discount_applied: null,
+      discount_note: null,
     });
     expect(body.token).toMatch(/^[A-Za-z0-9_-]{43}$/); // 32 bytes base64url
 
@@ -478,7 +513,7 @@ describe("POST /api/checkout — business rules", () => {
   it("falls back to the constant price when the prices row is missing", async () => {
     state.prices = [];
     await post(checkout, { ...VALID, tier: "spark" });
-    expect(inserted()).toMatchObject({ tier: "spark", price_usd: 11 });
+    expect(inserted()).toMatchObject({ tier: "spark", price_usd: 49 });
   });
 
   it("a launch-offer env left set changes nothing: the prices table is the price", async () => {
@@ -500,22 +535,22 @@ describe("POST /api/checkout — business rules", () => {
     expect(inserted()).toMatchObject({ src: "reddit" });
   });
 
-  it("applies upgrade credit from a paid Quick Read parent (same email, same mode): Verdict for $288", async () => {
-    state.parent = { id: PARENT_ID, tier: "spark", price_usd: "11.00", paid_at: new Date(Date.now() - 3600_000).toISOString(), email: "founder@example.com", mode: "sandbox" };
+  it("applies upgrade credit from a paid Quick Read parent (same email, same mode): Verdict for $250", async () => {
+    state.parent = { id: PARENT_ID, tier: "spark", price_usd: "49.00", paid_at: new Date(Date.now() - 3600_000).toISOString(), email: "founder@example.com", mode: "sandbox" };
     await post(checkout, { ...VALID, parent_order_id: PARENT_ID });
-    expect(inserted()).toMatchObject({ price_usd: 288, parent_order_id: PARENT_ID });
-    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 288, title: "Verdict · JH-33333333" });
+    expect(inserted()).toMatchObject({ price_usd: 250, parent_order_id: PARENT_ID });
+    expect(m(h.createCheckout).mock.calls[0][0]).toMatchObject({ amountUsd: 250, title: "Verdict · JH-33333333" });
   });
 
   it("no second credit when the parent was already used by a paid order", async () => {
-    state.parent = { id: PARENT_ID, tier: "spark", price_usd: 11, paid_at: new Date(Date.now() - 3600_000).toISOString(), email: "founder@example.com", mode: "sandbox" };
+    state.parent = { id: PARENT_ID, tier: "spark", price_usd: 49, paid_at: new Date(Date.now() - 3600_000).toISOString(), email: "founder@example.com", mode: "sandbox" };
     state.parentUsed = 1;
     await post(checkout, { ...VALID, parent_order_id: PARENT_ID });
     expect(inserted()).toMatchObject({ price_usd: 299 });
   });
 
   it("rejects a parent order belonging to another email", async () => {
-    state.parent = { id: PARENT_ID, tier: "spark", price_usd: 11, paid_at: new Date().toISOString(), email: "other@example.com", mode: "sandbox" };
+    state.parent = { id: PARENT_ID, tier: "spark", price_usd: 49, paid_at: new Date().toISOString(), email: "other@example.com", mode: "sandbox" };
     const res = await post(checkout, { ...VALID, parent_order_id: PARENT_ID });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ code: "bad_parent" });

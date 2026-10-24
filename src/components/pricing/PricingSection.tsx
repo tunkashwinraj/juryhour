@@ -1,6 +1,6 @@
 // Pricing (docs/WEBSITE_SPEC.md §5.7; WEBSITE_CONTRACTS §2 B). Server component, no loading state:
 // prices come from the cached shell read (constants fallback). Exactly two cards (Quick Read, Verdict
-// [VERDICT_BADGE]); the Verdict card follows the visitor's HALF code client-side (CouponPriceCard).
+// [VERDICT_BADGE]); the Verdict card follows the visitor's LAUNCH20 code client-side (CouponPriceCard).
 // Under the cards: extra jurors and the upgrade credit.
 import { Suspense } from "react";
 import { HideWhenRefused, SalesStatus } from "@/components/preview/PreviewProvider";

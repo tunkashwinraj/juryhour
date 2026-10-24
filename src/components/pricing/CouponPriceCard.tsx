@@ -1,6 +1,7 @@
 "use client";
-// A PriceCard that follows the visitor's code. Verdict without HALF: "$299 launch offer · regular $499
-// from Dec 1" and an ad for HALF with its end date; with HALF (?code=HALF or typed): "$149 with HALF".
+// A PriceCard that follows the visitor's code. Verdict without the code: "$299 launch offer · regular $499
+// from Dec 1" and an ad for LAUNCH20 ("20% off your first Verdict with code LAUNCH20 until Nov 30 → $239");
+// with the code (?code=LAUNCH20 or typed): "$239 with LAUNCH20 · first Verdict".
 // Never a strike-through: the regular price hasn't been charged yet. Other tiers render a plain card.
 // The server re-validates everything at checkout (first Verdict per email, end date, tier).
 import { PriceCard, type PriceCardProps } from "@/components/ui";
@@ -8,7 +9,7 @@ import { CouponCodeField } from "@/components/preview/CouponCodeField";
 import { usePreview } from "@/components/preview/PreviewProvider";
 import type { CtaTier } from "@/components/preview/logic";
 import { couponPrice } from "@/lib/coupons";
-import { VERDICT_LAUNCH_NOTE, couponEndsLabel, usd } from "./pricing-data";
+import { VERDICT_LAUNCH_NOTE, couponAdText, couponEndsLabel, usd } from "./pricing-data";
 
 export function CouponPriceCard({
   tier,
@@ -43,8 +44,7 @@ export function CouponPriceCard({
       footnote={
         coupon ? (
           <>
-            First Verdict? Code {coupon.code} makes it {usd(couponPrice(price, coupon.percentOff))} through{" "}
-            {couponEndsLabel(coupon.endsAt)}. <CouponCodeField />
+            {couponAdText(price, coupon)} <CouponCodeField />
           </>
         ) : undefined
       }

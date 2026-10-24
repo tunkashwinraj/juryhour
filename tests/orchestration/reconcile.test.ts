@@ -140,7 +140,7 @@ describe("QUOTING", () => {
   });
 
   it("cpi 3× cap → launch refused → procurement fired once (not every minute)", async () => {
-    terac.cpi = 12;
+    terac.cpi = 32;
     const { o } = quoting();
     await runReconcile();
     at(1);

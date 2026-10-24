@@ -7,11 +7,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-10-24",
     title: "Simpler pricing",
     items: [
-      "Two plans: Quick Read ($11) and Verdict ($299 launch offer, 20 real people; regular $499 from Dec 1).",
-      "Code HALF: your first Verdict is $149 through Nov 30.",
-      "Extra jurors: add up to 20 to a Quick Read or Verdict at $7 each.",
+      "Two plans: Quick Read ($49, 3 real people) and Verdict ($299 launch offer, 15 real people; regular $499 from Dec 1).",
+      "20% off your first Verdict with code LAUNCH20 until Nov 30 → $239.",
+      "Extra jurors: add up to 20 to a Quick Read or Verdict at $16 each.",
       "Older packages and add-ons are no longer sold. Orders already placed are delivered as bought.",
-      "A Quick Read still counts toward a Verdict if you upgrade within 24 hours, and it works with HALF.",
+      "A Quick Read still counts toward a Verdict if you upgrade within 24 hours. One discount per order: the credit and LAUNCH20 don't combine, and checkout applies the bigger saving.",
     ],
   },
   {

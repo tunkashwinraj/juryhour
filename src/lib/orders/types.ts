@@ -10,7 +10,7 @@ export type OrderRow = {
   stage: Stage;
   tier: TierName;
   addons: AddonName[];
-  /** Paid extra jurors, 0–15 (migration 0006; absent on older rows). */
+  /** Paid extra jurors, 0–20 (migration 0006; absent on older rows). */
   extra_jurors?: number | null;
   price_usd: number | null;
   email: string;

@@ -230,7 +230,7 @@ const previewFollowup2: Render = (vars, ctx) => {
     `Before you send traffic to your page, have ${t.jurors} real people who match your buyer judge it.`,
     `Verdict (${price} launch offer): ${t.jurors} real people compare your page with our rewrite, blind and in random order. You get the winner, the top fixes in their own words, and the winning copy to paste.`,
     ...(coupon
-      ? [`Your first Verdict is ${usd(couponPrice(t.price, coupon.percentOff))} with code ${coupon.code} through ${couponEndsLabel(coupon.endsAt)} (the code is already in the link below).`]
+      ? [`${coupon.percentOff}% off your first Verdict with code ${coupon.code} until ${couponEndsLabel(coupon.endsAt)} → ${usd(couponPrice(t.price, coupon.percentOff))} (the code is already in the link below).`]
       : []),
     "It's research, a directional signal from real people, not a promise of sales.",
     "This is our last email about your preview.",

@@ -153,8 +153,9 @@ function sections(): LegalSection[] {
         <p>
           Payments are processed by Whop and are subject to Whop&apos;s terms. Partner and referral codes record where you
           heard about us and don&apos;t change the price. A discount code changes the price only as stated with it (for
-          example, HALF applies to a customer&apos;s first Verdict until its end date) and as shown at checkout. Extra jurors
-          are never discounted. Refunds follow our{" "}
+          example, LAUNCH20 applies to a customer&apos;s first Verdict until its end date) and as shown at checkout. One discount
+          applies per order: a discount code and the Quick Read upgrade credit don&apos;t combine, and checkout applies the
+          larger saving. Extra jurors are never discounted. Refunds follow our{" "}
           <a href="/legal/refunds">refund policy</a>, which is enforced in code.
         </p>
       ),

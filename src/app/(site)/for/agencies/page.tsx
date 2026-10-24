@@ -72,7 +72,7 @@ const seg: Segment = {
   problem: {
     title: "Why do agencies lose arguments about copy?",
     answer:
-      "Because it's your opinion against the client's. A verdict from 20 real people in the client's market settles the headline debate with evidence instead of taste.",
+      "Because it's your opinion against the client's. A verdict from 15 real people in the client's market settles the headline debate with evidence instead of taste.",
     points: [
       { label: "THE CLIENT", title: "Loves their tagline.", body: "Strangers who match the buyer may not understand it. Now you can show them." },
       { label: "THE REVIEW", title: "Goes round in circles.", body: "Rounds of feedback from people who already know the product." },
@@ -103,7 +103,7 @@ const seg: Segment = {
   highlight: "proof",
   pricingTitle: "What does a test on a client page cost?",
   pricingAnswer:
-    "The same fixed prices as everyone else. Verdict is the one to put in front of a client: their page against our rewrite, judged by 20 real people.",
+    "The same fixed prices as everyone else. Verdict is the one to put in front of a client: their page against our rewrite, judged by 15 real people.",
   faqTitle: "Questions from agencies",
   faq: faqByIds(["client-pages", "white-label", "affiliate", "bundle", "codes", "anonymous", "refunds"]),
   extra: <AgencyExtras />,

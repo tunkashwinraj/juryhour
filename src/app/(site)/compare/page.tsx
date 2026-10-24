@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { CompareTable, Section } from "@/components/ui";
-import { TIERS } from "@/lib/constants";
+import { EXTRA_JUROR_USD, TIERS, VERDICT_REGULAR_FROM, VERDICT_REGULAR_USD } from "@/lib/constants";
+import { getPricingSnapshot } from "@/lib/marketing-data";
+import { couponAdLine, tierPrice } from "@/components/pricing/pricing-data";
 import { pageMetadata } from "@/lib/seo";
 import {
   COMPARE_AS_OF,
@@ -30,8 +32,9 @@ const cite = (f: Fact) => (
   </>
 );
 
-export default function ComparePage() {
+export default async function ComparePage() {
   const P = TIERS.proof;
+  const { prices, coupon } = await getPricingSnapshot();
   return (
     <main id="main">
       <PageHero
@@ -80,7 +83,11 @@ export default function ComparePage() {
               label: "Price",
               cells: [
                 <>
-                  Fixed per test: Quick Read ${TIERS.spark.price}, Verdict ${P.price} (<Link href="/pricing">today&apos;s prices</Link>)
+                  Fixed per test: Quick Read ${tierPrice("spark", prices)} ({TIERS.spark.jurors} people), Verdict $
+                  {tierPrice("proof", prices)} launch offer ·
+                  regular ${VERDICT_REGULAR_USD} from {VERDICT_REGULAR_FROM} ({P.jurors} people), extra jurors $
+                  {EXTRA_JUROR_USD} each.{coupon ? <> {couponAdLine(prices, coupon)}</> : null} (
+                  <Link href="/pricing">today&apos;s prices</Link>)
                 </>,
                 cite(WYNTER.price),
                 cite(PICKFU.price),

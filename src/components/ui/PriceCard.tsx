@@ -9,7 +9,7 @@ export type PriceCardProps = {
   priceNote?: ReactNode;
   /** Struck-through earlier price shown before the price. Only for a price that was actually charged before. */
   compareAt?: number | null;
-  /** Shown after the price, e.g. "launch offer · regular $499 from Dec 1" or "with HALF". */
+  /** Shown after the price, e.g. "launch offer · regular $499 from Dec 1" or "with LAUNCH20". */
   priceSuffix?: ReactNode;
   jurors?: number | null;
   summary: string;

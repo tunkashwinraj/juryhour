@@ -116,7 +116,7 @@ async function makeOrder(over: Row): Promise<Row> {
         token: randomBytes(32).toString("base64url"),
         mode: "sandbox",
         tier: "spark",
-        price_usd: 11,
+        price_usd: 49,
         email: TEST_EMAIL,
         buyer_desc: "CHAOS TEST — Etsy sellers who do their own taxes",
         pitch_text: "Ledgerly turns your Etsy sales into tax-ready books. Connect your shop in 2 minutes. Export a tax-ready report in one click. Plans from $12 per month.",
@@ -232,7 +232,7 @@ const scenarios: Record<number, { name: string; run: () => Promise<Outcome> }> =
       const { db } = await lib();
       const order = await makeOrder({ stage: "QUOTING" });
       const test = await makeTest(order);
-      await makePanel(order, test, { status: "priced", cost_per_participant: 7 }); // spark cap $7 for 3 jurors → 3× cap
+      await makePanel(order, test, { status: "priced", cost_per_participant: 32 }); // spark cap $32 for 3 jurors → 3× cap
       const refusal = await ops("launch_panel", { actor: "procurement", order_id: order.id, reasoning: "chaos test 4" });
       console.log(`    launch_panel → ${refusal.status} ${refusal.json.code}`);
       await reconcile();
@@ -302,7 +302,7 @@ const scenarios: Record<number, { name: string; run: () => Promise<Outcome> }> =
     name: "Report with a fabricated quote → submit_report refuses; a verbatim report is delivered",
     run: async () => {
       const { REPORT_CAVEAT } = await lib();
-      const order = await makeOrder({ stage: "SYNTHESIZING", tier: "proof", price_usd: 149 });
+      const order = await makeOrder({ stage: "SYNTHESIZING", tier: "proof", price_usd: 239 });
       const test = await makeTest(order);
       const panel = await makePanel(order, test, { status: "stopped", requested_n: 2, launched_at: new Date().toISOString() });
       const r1 = await makeResponse(test, panel, { decision: "approved", understood_a: true, understood_b: true, answers: ANSWERS("B", "The second one told me exactly what I get.") });

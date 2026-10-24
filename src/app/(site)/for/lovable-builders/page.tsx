@@ -50,7 +50,7 @@ const seg: Segment = {
   highlight: "proof",
   pricingTitle: "Which package should a weekend project start with?",
   pricingAnswer:
-    "Quick Read is the cheapest way to hear from real people tonight: 3 people react to your headline and you get a rewritten headline. When you're about to spend on ads or a launch, Verdict tests your whole hero against our rewrite on 20 people.",
+    "Quick Read is the cheapest way to hear from real people tonight: 3 people react to your headline and you get a rewritten headline. When you're about to spend on ads or a launch, Verdict tests your whole hero against our rewrite on 15 people.",
   faqTitle: "Questions from indie builders",
   faq: faqByIds(["preview", "what-tested", "edit-site", "how-fast", "upgrade", "codes", "unreleased"]),
 };

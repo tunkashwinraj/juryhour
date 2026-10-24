@@ -5,6 +5,7 @@ import {
   ADDON_EXTRA_JURORS,
   ADS_DAILY_CAP_PER_CAMPAIGN,
   ADS_DAILY_CAP_TOTAL,
+  EXTRA_JUROR_COST_CAP_USD,
   MARGIN_FLOOR,
   PRICE_BAND,
   REPORT_CAVEAT,
@@ -58,8 +59,8 @@ export type PanelSpec = {
 
 /**
  * Juror counts and cost cap for an order, keyed by tier (retest has its own jurors/cap/deadline and the
- * proof format). Paid `extra_jurors` raise the panel size and the cap pro rata (tier cap / tier jurors ×
- * jurors), so the launch-time margin check (checkLaunch) covers them. Historical orders only: `extra5` adds ADDON_EXTRA_JURORS and raises the cap pro rata;
+ * proof format). Each paid `extra_jurors` adds one juror and EXTRA_JUROR_COST_CAP_USD ($10.50, Terac's
+ * real per-juror cost) to the cap, so the launch-time margin check (checkLaunch) covers them. Historical orders only: `extra5` adds ADDON_EXTRA_JURORS and raises the cap pro rata;
  * `rush` halves the deadline (add-ons are no longer sold). Specialist has no fixed cap: it is whatever keeps the 30% margin floor
  * at the quoted price (price·(1−MARGIN_FLOOR) − Whop fee).
  */
@@ -67,18 +68,18 @@ export function panelSpec(order: {
   tier: TierName;
   addons: readonly AddonName[] | null;
   price_usd: number | null;
-  /** Paid extra jurors (0–15); missing on rows from before migration 0006 → 0. */
+  /** Paid extra jurors (0–20); missing on rows from before migration 0006 → 0. */
   extra_jurors?: number | null;
 }): PanelSpec {
   const t = TIERS[order.tier];
   const addons = order.addons ?? [];
-  const paidExtra = Math.max(0, Math.trunc(Number(order.extra_jurors ?? 0)) || 0);
-  const extra = (addons.includes("extra5") ? ADDON_EXTRA_JURORS : 0) + (t.jurorCostCap !== null ? paidExtra : 0);
-  const maxJurors = t.jurors + extra;
+  const paidExtra = t.jurorCostCap !== null ? Math.max(0, Math.trunc(Number(order.extra_jurors ?? 0)) || 0) : 0;
+  const legacyExtra = addons.includes("extra5") ? ADDON_EXTRA_JURORS : 0;
+  const maxJurors = t.jurors + legacyExtra + paidExtra;
   const price = Number(order.price_usd ?? 0);
   const costCap =
     t.jurorCostCap !== null
-      ? round2((t.jurorCostCap * maxJurors) / t.jurors)
+      ? round2((t.jurorCostCap * (t.jurors + legacyExtra)) / t.jurors + EXTRA_JUROR_COST_CAP_USD * paidExtra)
       : price > 0
         ? round2(price * (1 - MARGIN_FLOOR) - WHOP_FEE(price))
         : 0;

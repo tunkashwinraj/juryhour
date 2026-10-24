@@ -1,23 +1,25 @@
 # JuryHour
 
-> JuryHour tests a landing page or pitch with real people who match your buyer. An AI agent writes a challenger version of your page; real, identity-verified people recruited through Terac judge yours against it, in random order, without knowing which is yours. You get a written verdict with their anonymous quotes and the winning copy, usually the same day. Prices start at $11. Results are directional research from a small panel of real people, not a sales guarantee.
+> JuryHour tests a landing page or pitch with real people who match your buyer. An AI agent writes a challenger version of your page; real, identity-verified people recruited through Terac judge yours against it, in random order, without knowing which is yours. You get a written verdict with their anonymous quotes and the winning copy, usually the same day. Prices start at $49. Results are directional research from a small panel of real people, not a sales guarantee.
 
 JuryHour is run by AI agents ("a company with zero employees"): agents research, write, recruit, grade, report and handle refunds, while code enforces every money limit. Humans take part only as paid jurors. Payments are processed by Whop. Links below are relative to this site's origin.
 
 ## Pricing (USD, as of Oct 24, 2026; prices can change, and the checkout shows the current price)
 
-- Quick Read, $11: 3 real people, 2-minute reaction to your headline, AI critique, 1 rewritten headline (untested). Same day.
-- Verdict, $299 launch offer (regular $499 from Dec 1, 2026), recommended: 20 real people, your page vs our AI rewrite, blind and in random order; winner, scorecard, top fixes, winning copy. Same day.
-- Code HALF: your first Verdict is $149 (50% off the Verdict price) through Nov 30, 2026 (ET). One per customer; it applies to the Verdict price only and works with the Quick Read upgrade credit ($149 − $11 = $138).
-- Extra jurors: up to 20 per Quick Read or Verdict, $7 each (never discounted).
-- A Quick Read counts toward a Verdict if you upgrade within 24 hours ($299 − $11 = $288).
+- Quick Read, $49: 3 real people, 2-minute reaction to your headline, AI critique, 1 rewritten headline (untested). Same day.
+- Verdict, $299 launch offer (regular $499 from Dec 1, 2026), recommended: 15 real people, your page vs our AI rewrite, blind and in random order; winner, scorecard, top fixes, winning copy. Same day.
+- Code LAUNCH20: 20% off your first Verdict until Nov 30, 2026 (ET) → $239. One per customer (the first Verdict for your email); it applies to the Verdict price only. Arriving with ?code=LAUNCH20 in the link applies it automatically.
+- Extra jurors: up to 20 per Quick Read or Verdict, $16 each (never discounted).
+- A Quick Read counts toward a Verdict if you upgrade within 24 hours ($299 − $49 = $250).
+- One discount per order: LAUNCH20 and the Quick Read upgrade credit don't combine. If both could apply, checkout applies the bigger saving (LAUNCH20, $60 off, beats the $49 credit) and says which one it used.
+- Retest, $129: 8 new real people judge your updated page against a fresh rewrite. Offered only from a delivered Verdict report, within 30 days.
 - Partner codes record where you came from; they don't give discounts.
 
 ## Key pages
 
 - [Home and free AI preview](/): paste a URL, get a free AI preview (no card, no login).
 - [How it works](/how-it-works): recruiting, what jurors see, quality checks, how stats are computed, limits.
-- [Pricing](/pricing): the two plans, the HALF code, extra jurors, upgrade credit and the refund summary.
+- [Pricing](/pricing): the two plans, the LAUNCH20 code, extra jurors, upgrade credit and the refund summary.
 - [Sample report](/sample-report): an example verdict (labeled as an example).
 - [Compare](/compare): JuryHour vs Wynter, PickFu, UserTesting and asking friends.
 - [FAQ](/faq)

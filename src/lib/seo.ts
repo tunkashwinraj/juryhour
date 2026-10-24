@@ -3,6 +3,7 @@
 import type { Metadata } from "next";
 import { createElement, type ReactElement } from "react";
 import { PUBLIC_TIER_LABELS, TIERS, type TierName } from "./constants";
+import { couponPrice, type PublicCoupon } from "./coupons";
 import { env } from "./env";
 
 export const SITE_NAME = "JuryHour";
@@ -217,10 +218,14 @@ export function websiteLd(): LdObject {
 /** Fixed-price tiers listed as JSON-LD offers. Retest is sold only from a Verdict report, never here. */
 const LD_TIERS = ["spark", "proof"] as const satisfies readonly TierName[];
 
+const ET_ISO_DATE = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+
 /**
- * Product with one Offer per public plan (USD, InStock): Quick Read and Verdict (launch-offer price).
+ * Product with one Offer per public plan (USD, InStock): Quick Read and Verdict (launch-offer price),
+ * plus the running Verdict coupon (first Verdict, e.g. LAUNCH20 → $239) with priceValidUntil = its last
+ * ET day. Retest is never listed.
  */
-export function productOffersLd(prices: Partial<Record<TierName, number | null>>): LdObject {
+export function productOffersLd(prices: Partial<Record<TierName, number | null>>, coupon: PublicCoupon | null = null): LdObject {
   const offers: LdObject[] = [];
   for (const tier of LD_TIERS) {
     const price = prices[tier] ?? TIERS[tier].price;
@@ -231,6 +236,19 @@ export function productOffersLd(prices: Partial<Record<TierName, number | null>>
       priceCurrency: "USD",
       availability: "https://schema.org/InStock",
       url: absoluteUrl("/pricing"),
+    });
+  }
+  if (coupon && (LD_TIERS as readonly string[]).includes(coupon.tier)) {
+    const tier = coupon.tier as (typeof LD_TIERS)[number];
+    const list = prices[tier] ?? TIERS[tier].price;
+    offers.push({
+      "@type": "Offer",
+      name: `${PUBLIC_TIER_LABELS[tier]} with code ${coupon.code} (first ${PUBLIC_TIER_LABELS[tier]}, ${TIERS[tier].jurors} jurors)`,
+      price: couponPrice(list, coupon.percentOff).toFixed(2),
+      priceCurrency: "USD",
+      priceValidUntil: ET_ISO_DATE.format(new Date(Date.parse(coupon.endsAt) - 1)),
+      availability: "https://schema.org/InStock",
+      url: absoluteUrl(`/pricing?code=${encodeURIComponent(coupon.code)}`),
     });
   }
   return {

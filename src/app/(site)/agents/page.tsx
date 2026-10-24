@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Badge, Section } from "@/components/ui";
 import {
   BUYABLE_TIERS,
+  EXTRA_JUROR_USD,
+  MAX_EXTRA_JURORS,
   PREVIEW_LIMIT_PER_EMAIL_PER_DAY,
   PREVIEW_LIMIT_PER_IP_PER_DAY,
   RETEST_WINDOW_DAYS,
@@ -48,7 +50,8 @@ const checkoutExample = (base: string) => `curl -X POST ${base}/api/checkout \\
     "preview_id": "<from /api/preview: run the free preview first, it includes our content check>"
   }'
 
-# 200 {"ok":true,"purchase_url":"https://whop.com/…","token":"…"}
+# 200 {"ok":true,"purchase_url":"https://whop.com/…","token":"…","price_usd":299,
+#      "coupon_applied":null,"credit_usd":0,"discount_applied":null,"discount_note":null}
 # A human opens purchase_url and pays. Then poll the order:
 
 curl ${base}/api/order/<token>
@@ -145,10 +148,13 @@ export default function AgentsPage() {
                       <code>{t}</code> ({TIER_LABELS[t]})
                     </span>
                   ))}
-                  . <code>extra_jurors</code> is 0–15 at $7 each (400 <code>extra_jurors_out_of_range</code>); legacy{" "}
+                  . <code>extra_jurors</code> is 0–{MAX_EXTRA_JURORS} at ${EXTRA_JUROR_USD} each (400 <code>extra_jurors_out_of_range</code>); legacy{" "}
                   <code>addons</code> are refused (400 <code>addons_not_offered</code>); other tiers get 400{" "}
                   <code>tier_not_offered</code>. <code>coupon</code> applies a discount code to the Verdict (400{" "}
-                  <code>coupon_unknown</code>, <code>coupon_expired</code>, <code>coupon_not_applicable</code>); a
+                  <code>coupon_unknown</code>, <code>coupon_expired</code>, <code>coupon_not_applicable</code>,{" "}
+                  <code>coupon_already_used</code>). One discount per order: a code and the Quick Read upgrade credit
+                  never combine; the larger saving is applied and the response says which (<code>discount_applied</code>,{" "}
+                  <code>discount_note</code>). A
                   combination that can&apos;t keep our 30% margin gets 400 <code>margin_too_low</code>. <code>retest</code> needs <code>parent_order_id</code> of a delivered{" "}
                   <code>proof</code> order with the same email, within {RETEST_WINDOW_DAYS} days, once (400{" "}
                   <code>retest_needs_parent</code>, <code>retest_parent_not_eligible</code>,{" "}
