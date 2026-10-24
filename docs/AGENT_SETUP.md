@@ -91,3 +91,18 @@ The text arrives inside a `<routine-fire-payload>` block marked as untrusted; th
 - Runs use Max-plan subscription usage; if the plan limit is hit, runs are rejected and the reconciler times the stage out and refunds. Agent `ai_cost` is booked as $0 (subscription).
 - Scheduled runs: 100/hour/account. Per-task fires (API + Run now): 30/hour.
 - Rotating a token: Edit → API trigger → Regenerate (old token stops immediately) → update Vercel env.
+
+## 7. Live tasks (created 2026-10-24, environment `juryhour-agents` = `env_014j99ckcuz4S4KWZd8n22Yj`)
+
+| Task | Trigger id | Trigger | Model |
+|---|---|---|---|
+| JuryHour Researcher | `trig_01K3JiwsynW4ya4b25KX6sZG` | API (also has a stray daily 9:48 schedule from the web form — harmless: with no payload it stops) | default |
+| JuryHour Analyst | `trig_01UbuGWJGPfXyUksRc55dwbT` | API (token: generate on the web) | claude-opus-5-5 |
+| JuryHour Procurement | `trig_01UzCYnxSp1Bz3Bk18K8r6aA` | API (token: generate on the web) | claude-sonnet-5-5 |
+| JuryHour Disputes | `trig_01RnQrfiA4jwKKf9DZ2qd8Aq` | API (token: generate on the web) | claude-sonnet-5-5 |
+| JuryHour Support | `trig_012TJxUDXrEdyj7YRJL1uTXb` | API (token: generate on the web) | claude-sonnet-5-5 |
+| JuryHour CEO | `trig_0173h7bqhAmbnG45a45Efb8M` | `7 * * * *` America/New_York | claude-sonnet-5-5 |
+| JuryHour Growth | `trig_01WP7VRTCB8dq2mfx7RZsYcT` | `37 * * * *` America/New_York | claude-sonnet-5-5 |
+| JuryHour CFO | `trig_01SVBkGuoxKhCSNeRsXsxPSQ` | `7 23 * * *` America/New_York | claude-haiku-5-5 |
+
+Fire URL pattern: `https://api.anthropic.com/v1/claude_code/routines/<trigger id>/fire`. Tasks created through the API inherit all of the account's connectors; remove them on the web (Edit → Connectors) — the agents only need the Ops API.
