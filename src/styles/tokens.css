@@ -1,7 +1,12 @@
 /*
- * JuryHour design tokens (docs/WEBSITE_SPEC.md §3, owned by Website Agent A).
+ * JuryHour design tokens (docs/WEBSITE_SPEC.md §3, owned by Website Agent A; brand colors from the
+ * founder's logo kit, public/brand/README.md).
  *
- * Concept "the verdict": cool paper, ink navy, one stamp red used sparingly, one calm green for winners.
+ * Brand: Ink #14213D, Verdict red #D8342C, Paper #EEF2F8. Light theme uses them verbatim
+ * (--ink, --verdict, --paper). Dark theme: Ink is the page, Paper is the text; the red is lifted to
+ * #EA5A50 only so marks/fills keep >= 3:1 on the dark surfaces (the logo's slash stays #D8342C).
+ * --verdict is for marks, fills and borders (stamp frame, winner tally, one CTA state). Small text in
+ * red uses --verdict-ink (brand red darkened/lightened to clear 4.5:1), never --verdict.
  * Light is the default; dark follows `prefers-color-scheme` unless an ancestor sets
  * `data-theme="light"`. `data-theme="dark"|"light"` on any element forces that theme for its subtree
  * (the /styleguide renders both side by side this way).
@@ -10,19 +15,22 @@
  * Text needs >= 4.5:1, UI boundaries / meaningful graphics >= 3:1.
  *
  *   LIGHT                         paper   surface  wash        DARK                          paper   surface  wash
- *   --ink (text)                  15.95   17.41    14.69       --ink (text)                  15.83   14.48    12.80
- *   --ink-2 (secondary text)       9.31   10.16     8.57       --ink-2                       11.49   10.52     9.29
- *   --muted (tertiary text)        6.04    6.59     5.56       --muted                        7.65    7.00     6.19
- *   --verdict (text/marks)         6.02    6.57     5.54       --verdict                      8.12    7.43     6.57
- *   --signal (text/marks)          5.97    6.52     5.50       --signal                       9.77    8.94     7.90
- *   --focus (ring, 3:1 needed)     5.79    6.32     5.33       --focus                        8.87    8.12     7.18
- *   --rule-strong (input border)   3.50    3.82     3.22       --rule-strong                  3.78    3.46     3.06
- *   --on-ink on --ink (primary btn)          15.95             --on-ink on --ink                     15.83
- *   --on-ink on --ink-hover                  11.79             --on-ink on --ink-hover               12.22
- *   --verdict on --verdict-wash               5.69             --verdict on --verdict-wash            6.89
- *   --signal on --signal-wash                 5.70             --signal on --signal-wash              7.39
- *   --warn-ink on --warn-wash                 6.67             --warn-ink on --warn-wash              9.03
- *   --on-verdict on --verdict                 6.02             --on-verdict on --verdict              8.12
+ *   --ink (text)                  14.21   15.97    12.96       --ink (text)                  14.21   12.84    11.33
+ *   --ink-2 (secondary text)       8.95   10.06     8.16       --ink-2                       10.28    9.29     8.19
+ *   --muted (tertiary text)        5.80    6.51     5.29       --muted                        7.28    6.58     5.81
+ *   --verdict-ink (red text)       5.81    6.53     5.30       --verdict-ink                  6.99    6.32     5.57
+ *   --signal (text/marks)          5.80    6.51     5.29       --signal                       8.46    7.64     6.74
+ *   --verdict (marks, 3:1 needed)  4.20    4.72     3.83       --verdict                      4.62    4.17     3.68
+ *   --focus (ring, 3:1 needed)     5.62    6.32     5.13       --focus                        7.68    6.94     6.12
+ *   --rule-strong (input border)   3.75    4.21     3.42       --rule-strong                  4.18    3.78     3.33
+ *   --on-ink on --ink (primary btn)          14.21             --on-ink on --ink                     14.21
+ *   --on-ink on --ink-hover                  10.02             --on-ink on --ink-hover               10.89
+ *   --verdict-ink on --verdict-wash           5.61             --verdict-ink on --verdict-wash        6.23
+ *   --signal on --signal-wash                 5.63             --signal on --signal-wash              6.62
+ *   --warn-ink on --warn-wash                 6.56             --warn-ink on --warn-wash              8.46
+ *   --on-verdict on --verdict                 4.72             --on-verdict on --verdict              4.62
+ *   --ink on --verdict-wash                  13.71             --ink on --verdict-wash               12.67
+ *   Worst text pair: light 4.72 (--on-verdict on --verdict), dark 4.62 (--on-verdict on --verdict).
  *
  * --rule (hairlines) is decorative separation only and is never the sole carrier of meaning.
  */
@@ -30,63 +38,65 @@
 :root,
 [data-theme="light"] {
   /* ---- color: surfaces */
-  --paper: #f3f5f9; /* cool, blue-tinted off-white page background */
+  --paper: #eef2f8; /* brand Paper: cool, blue-tinted page background */
   --surface: #ffffff; /* cards, inputs, raised objects */
-  --wash: #e8ecf2; /* quiet fills: table stripes, quote blocks, segmented track */
-  --rule: #d5dce6; /* hairline borders */
-  --rule-strong: #76839a; /* input borders, outlined tally marks (>= 3:1) */
+  --wash: #e2e8f1; /* quiet fills: table stripes, quote blocks, segmented track */
+  --rule: #cbd4e1; /* hairline borders */
+  --rule-strong: #6e7c95; /* input borders, outlined tally marks (>= 3:1) */
 
   /* ---- color: text */
-  --ink: #0e1a2e; /* deep ink navy */
-  --ink-2: #33425a; /* secondary text */
-  --muted: #4f5e74; /* blue-grey tertiary text, captions, mono labels */
-  --on-ink: #f3f5f9; /* text on --ink fills */
-  --ink-hover: #22324d; /* primary button hover */
+  --ink: #14213d; /* brand Ink */
+  --ink-2: #34425e; /* secondary text */
+  --muted: #515e78; /* blue-grey tertiary text, captions, mono labels */
+  --on-ink: #eef2f8; /* text on --ink fills */
+  --ink-hover: #283a60; /* primary button hover */
 
   /* ---- color: accents (sparingly) */
-  --verdict: #b42318; /* stamp red: stamp, winner tally, one CTA state */
-  --verdict-wash: #fbebe9;
-  --on-verdict: #f3f5f9;
+  --verdict: #d8342c; /* brand Verdict red: stamp frame, winner tally, one CTA state (marks/fills) */
+  --verdict-ink: #b3261e; /* red for small text (errors, badge/stamp labels) */
+  --verdict-wash: #fbeae8;
+  --on-verdict: #ffffff;
   --signal: #1a6b40; /* calm green: winner deltas, positive scores */
-  --signal-wash: #e5f3eb;
+  --signal-wash: #e3f2ea;
   --warn-ink: #7a4a00;
-  --warn-wash: #fdf1d6;
+  --warn-wash: #fcefd3;
   --warn-rule: #c99a2e;
   --focus: #1d55d6; /* focus ring */
 
-  --shadow-raised: 0 1px 0 rgb(14 26 46 / 0.04), 0 10px 24px -18px rgb(14 26 46 / 0.35);
-  --backdrop: rgb(243 245 249 / 0.86);
-  --scrim: rgb(14 26 46 / 0.4);
+  --shadow-raised: 0 1px 0 rgb(20 33 61 / 0.04), 0 10px 24px -18px rgb(20 33 61 / 0.35);
+  --backdrop: rgb(238 242 248 / 0.86);
+  --scrim: rgb(20 33 61 / 0.4);
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0c1422; /* ink background */
-    --surface: #131d2f;
-    --wash: #1a2740;
-    --rule: #26344b;
-    --rule-strong: #62728c;
+    --paper: #14213d; /* brand Ink as the page */
+    --surface: #1a2948;
+    --wash: #213254;
+    --rule: #2e4068;
+    --rule-strong: #7183a6;
 
-    --ink: #e9eef6; /* paper text */
-    --ink-2: #c3cddc;
-    --muted: #9aa8bd;
-    --on-ink: #0c1422;
-    --ink-hover: #c9d3e3;
+    --ink: #eef2f8; /* brand Paper as text */
+    --ink-2: #c7d0df;
+    --muted: #a3b0c6;
+    --on-ink: #14213d;
+    --ink-hover: #ccd6e6;
 
-    --verdict: #ff8b7e;
-    --verdict-wash: #3a1a1a;
-    --on-verdict: #0c1422;
+    --verdict: #ea5a50;
+    --verdict-ink: #ff8a7f;
+    --verdict-wash: #3c2236;
+    --on-verdict: #14213d;
     --signal: #6cd09a;
-    --signal-wash: #123222;
+    --signal-wash: #16393a;
     --warn-ink: #f5c46b;
-    --warn-wash: #332710;
+    --warn-wash: #352c22;
     --warn-rule: #8a6a24;
     --focus: #8db4ff;
 
     --shadow-raised: 0 1px 0 rgb(0 0 0 / 0.3), 0 12px 28px -18px rgb(0 0 0 / 0.7);
-    --backdrop: rgb(12 20 34 / 0.84);
+    --backdrop: rgb(20 33 61 / 0.84);
     --scrim: rgb(0 0 0 / 0.6);
 
     color-scheme: dark;
@@ -94,30 +104,31 @@
 }
 
 [data-theme="dark"] {
-  --paper: #0c1422;
-  --surface: #131d2f;
-  --wash: #1a2740;
-  --rule: #26344b;
-  --rule-strong: #62728c;
+  --paper: #14213d;
+  --surface: #1a2948;
+  --wash: #213254;
+  --rule: #2e4068;
+  --rule-strong: #7183a6;
 
-  --ink: #e9eef6;
-  --ink-2: #c3cddc;
-  --muted: #9aa8bd;
-  --on-ink: #0c1422;
-  --ink-hover: #c9d3e3;
+  --ink: #eef2f8;
+  --ink-2: #c7d0df;
+  --muted: #a3b0c6;
+  --on-ink: #14213d;
+  --ink-hover: #ccd6e6;
 
-  --verdict: #ff8b7e;
-  --verdict-wash: #3a1a1a;
-  --on-verdict: #0c1422;
+  --verdict: #ea5a50;
+  --verdict-ink: #ff8a7f;
+  --verdict-wash: #3c2236;
+  --on-verdict: #14213d;
   --signal: #6cd09a;
-  --signal-wash: #123222;
+  --signal-wash: #16393a;
   --warn-ink: #f5c46b;
-  --warn-wash: #332710;
+  --warn-wash: #352c22;
   --warn-rule: #8a6a24;
   --focus: #8db4ff;
 
   --shadow-raised: 0 1px 0 rgb(0 0 0 / 0.3), 0 12px 28px -18px rgb(0 0 0 / 0.7);
-  --backdrop: rgb(12 20 34 / 0.84);
+  --backdrop: rgb(20 33 61 / 0.84);
   --scrim: rgb(0 0 0 / 0.6);
 
   color-scheme: dark;

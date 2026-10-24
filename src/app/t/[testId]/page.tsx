@@ -7,10 +7,16 @@ import { pickSid } from "../rules";
 import JurorApp from "./JurorApp";
 import styles from "./juror.module.css";
 
+// Neutral tab: no "· JuryHour" title suffix and a blank icon instead of the root brand favicon
+// (explicit icons here replace the inherited app/icon.svg + apple-icon; a blank one also stops the
+// browser from falling back to /favicon.ico).
+const BLANK_ICON = "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E";
+
 export const metadata: Metadata = {
-  title: "Quick feedback task",
+  title: { absolute: "Quick feedback task" },
   description: "Read a short description and share your honest reaction.",
   robots: { index: false, follow: false },
+  icons: { icon: BLANK_ICON, apple: [], shortcut: [] },
 };
 
 export const viewport: Viewport = {

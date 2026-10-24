@@ -16,7 +16,7 @@
   --accent: var(--ink); /* the old "ballot blue" accent becomes ink: primary buttons, links */
   --accent-ink: var(--on-ink);
   --accent-wash: var(--wash);
-  --bad-ink: var(--verdict);
+  --bad-ink: var(--verdict-ink);
   --bad-wash: var(--verdict-wash);
   --sans: var(--font-sans);
   --serif: var(--font-display);
@@ -309,7 +309,7 @@ table {
 
 .btn-danger {
   border-color: var(--verdict);
-  color: var(--verdict);
+  color: var(--verdict-ink);
 }
 
 .btn-danger:hover {
@@ -381,7 +381,7 @@ table {
 }
 
 .form-error {
-  color: var(--verdict);
+  color: var(--verdict-ink);
   font-weight: 600;
   margin: var(--space-2) 0 0;
 }

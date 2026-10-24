@@ -20,15 +20,17 @@ const light = block(':root,\n[data-theme="light"] {');
 const darkMedia = block(':root:not([data-theme="light"]) {');
 const darkAttr = block('[data-theme="dark"] {');
 
-const TEXT = ["ink", "ink-2", "muted", "verdict", "signal"];
+const TEXT = ["ink", "ink-2", "muted", "verdict-ink", "signal"];
 const BGS = ["paper", "surface", "wash"];
 const PAIRS: [string, string, number][] = [
   ...TEXT.flatMap((fg) => BGS.map((bg) => [fg, bg, 4.5] as [string, string, number])),
+  // --verdict is the brand red for marks/fills (tally, stamp frame, input error edge): 3:1 graphics.
+  ...BGS.map((bg) => ["verdict", bg, 3] as [string, string, number]),
   ...BGS.map((bg) => ["focus", bg, 3] as [string, string, number]),
   ...BGS.map((bg) => ["rule-strong", bg, 3] as [string, string, number]),
   ["on-ink", "ink", 4.5],
   ["on-ink", "ink-hover", 4.5],
-  ["verdict", "verdict-wash", 4.5],
+  ["verdict-ink", "verdict-wash", 4.5],
   ["signal", "signal-wash", 4.5],
   ["warn-ink", "warn-wash", 4.5],
   ["on-verdict", "verdict", 4.5],
@@ -52,12 +54,24 @@ describe.each([
   ["dark ([data-theme])", darkAttr],
 ])("tokens.css %s", (_name, t) => {
   it("defines every color token", () => {
-    for (const k of [...TEXT, ...BGS, "focus", "rule", "rule-strong", "on-ink", "ink-hover", "verdict-wash", "signal-wash", "warn-ink", "warn-wash", "on-verdict"]) {
+    for (const k of [...TEXT, ...BGS, "verdict", "focus", "rule", "rule-strong", "on-ink", "ink-hover", "verdict-wash", "signal-wash", "warn-ink", "warn-wash", "on-verdict"]) {
       expect(t[k], k).toMatch(/^#/);
     }
   });
   it.each(PAIRS)("%s on %s ≥ %s:1", (fg, bg, min) => {
     expect(contrastRatio(t[fg], t[bg])).toBeGreaterThanOrEqual(min);
+  });
+});
+
+describe("brand colors (public/brand/README.md)", () => {
+  it("light theme uses Ink, Verdict red and Paper verbatim", () => {
+    expect(light.ink.toLowerCase()).toBe("#14213d");
+    expect(light.verdict.toLowerCase()).toBe("#d8342c");
+    expect(light.paper.toLowerCase()).toBe("#eef2f8");
+  });
+  it("dark theme puts Paper text on an Ink page", () => {
+    expect(darkMedia.paper.toLowerCase()).toBe("#14213d");
+    expect(darkMedia.ink.toLowerCase()).toBe("#eef2f8");
   });
 });
 

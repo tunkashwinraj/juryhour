@@ -19,5 +19,6 @@ export { FAQ, type FAQProps, type FAQItem } from "./FAQ";
 export { Banner, type BannerProps } from "./Banner";
 export { TimerBar, type TimerBarProps } from "./TimerBar";
 export { Section, Container, Eyebrow, type SectionProps, type ContainerProps, type EyebrowProps } from "./Layout";
-export { SiteHeader, SiteFooter, AppHeader, AppFooter, Wordmark, supportEmailAddress } from "./SiteChrome";
+export { SiteHeader, SiteFooter, AppHeader, AppFooter, SkipLink, Wordmark, Logo, supportEmailAddress } from "./SiteChrome";
 export { cx, jurorLabel, formatPrice, tallyCounts, tallyGroups, segmentPanelId, segmentTabId } from "./lib";
+export { BRAND_INK, BRAND_PAPER, BRAND_SLASH, LOGO_HORIZONTAL, LOGO_SYMBOL, logoDataUri, logoSvg, type BrandLogo } from "./brand";

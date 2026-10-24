@@ -2,11 +2,12 @@
 // outside this group and get no marketing chrome.
 import { LaunchOfferBar } from "@/components/marketing/LaunchOfferBar";
 import { PreviewProvider } from "@/components/preview/PreviewProvider";
-import { SiteFooter, SiteHeader } from "@/components/ui";
+import { SiteFooter, SiteHeader, SkipLink } from "@/components/ui";
 
 export default function SiteLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <>
+      <SkipLink />
       <LaunchOfferBar />
       <SiteHeader />
       <PreviewProvider>{children}</PreviewProvider>

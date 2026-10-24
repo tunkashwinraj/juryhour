@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { BRAND_SLASH, LOGO_HORIZONTAL } from "./brand";
 import { MobileMenu, type NavItem } from "./MobileMenu";
 
 const NAV: NavItem[] = [
@@ -57,18 +58,47 @@ export function supportEmailAddress(): string {
   return process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@juryhour.com";
 }
 
-/** Tally-of-five glyph (four strokes, one red slash) + the name. */
-export function Wordmark({ className }: { className?: string }) {
+/**
+ * The JuryHour logo (horizontal lockup) from the founder's outlined kit. The ink shapes use
+ * currentColor (Ink on light, Paper on dark, following [data-theme] subtrees); the slash is always
+ * Verdict red. Minimum 96px wide (public/brand/README.md); default 24px tall ≈ 139px wide.
+ */
+export function Logo({ height = 24, className }: { height?: number; className?: string }) {
+  const width = Math.round((LOGO_HORIZONTAL.width / LOGO_HORIZONTAL.height) * height * 100) / 100;
   return (
-    <Link href="/" className={["ui-wordmark", className].filter(Boolean).join(" ")} aria-label="JuryHour home">
-      <svg className="ui-wordmark__glyph" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
-        <g stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-          <path d="M5 4v16M9.5 4v16M14 4v16M18.5 4v16" />
-        </g>
-        <path d="M2.5 17.5 21.5 6.5" stroke="var(--verdict)" strokeWidth="2.4" strokeLinecap="round" />
-      </svg>
-      <span className="ui-wordmark__text">JuryHour</span>
+    <svg
+      className={["ui-logo", className].filter(Boolean).join(" ")}
+      viewBox={LOGO_HORIZONTAL.viewBox}
+      width={width}
+      height={height}
+      role="img"
+      aria-label="JuryHour"
+      focusable="false"
+    >
+      <path fill="currentColor" d={LOGO_HORIZONTAL.ink} />
+      <path fill={BRAND_SLASH} d={LOGO_HORIZONTAL.slash} />
+    </svg>
+  );
+}
+
+/** The logo as the link home (header, footer, app chrome). */
+export function Wordmark({ className, height }: { className?: string; height?: number }) {
+  return (
+    <Link href="/" className={["ui-wordmark", className].filter(Boolean).join(" ")}>
+      <Logo height={height} />
     </Link>
+  );
+}
+
+/**
+ * "Skip to content": render it as the very first element of the page (before the launch-offer bar) so
+ * it is the first tab stop. Visually hidden until focused (ui.css .ui-skip).
+ */
+export function SkipLink() {
+  return (
+    <a className="ui-skip" href="#main">
+      Skip to content
+    </a>
   );
 }
 
@@ -76,9 +106,6 @@ export function Wordmark({ className }: { className?: string }) {
 export function SiteHeader() {
   return (
     <header className="ui-header">
-      <a className="ui-skip" href="#main">
-        Skip to content
-      </a>
       <div className="ui-container ui-header__bar">
         <Wordmark />
         <nav className="ui-header__nav" aria-label="Main">

@@ -88,28 +88,39 @@ export function appLink(ctx: EmailContext, path: string): string {
 
 // ---------- HTML shell ----------
 
+/** Brand header: the horizontal fullcolor logo, rasterized from the kit's outlined SVG (email clients
+ * need PNG). 3x asset shown at 162×28 (kit minimum is 96px wide); opaque white like the email body. */
+export const EMAIL_LOGO_PATH = "/brand/email/juryhour-horizontal-fullcolor-486x84.png";
+
+export function logoHeader(ctx: EmailContext): string {
+  return (
+    `<p style="margin:0 0 28px"><img src="${escapeHtml(appLink(ctx, EMAIL_LOGO_PATH))}" width="162" height="28" ` +
+    `alt="JuryHour" style="display:block;width:162px;height:28px;border:0;outline:none;text-decoration:none"></p>`
+  );
+}
+
 const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 export function p(innerHtml: string): string {
-  return `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;color:#1a1a1a">${innerHtml}</p>`;
+  return `<p style="margin:0 0 16px;font-size:16px;line-height:1.5;color:#14213d">${innerHtml}</p>`;
 }
 
 export function button(href: string, label: string): string {
   return (
     `<p style="margin:24px 0"><a href="${escapeHtml(href)}" ` +
-    `style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;` +
+    `style="display:inline-block;background:#14213d;color:#ffffff;text-decoration:none;` +
     `padding:12px 20px;border-radius:6px;font-weight:600;font-size:16px">${escapeHtml(label)}</a></p>`
   );
 }
 
 export function link(href: string, label: string): string {
-  return `<a href="${escapeHtml(href)}" style="color:#1a1a1a">${escapeHtml(label)}</a>`;
+  return `<a href="${escapeHtml(href)}" style="color:#14213d">${escapeHtml(label)}</a>`;
 }
 
 export function quoteBlock(text: string): string {
   return (
-    `<blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #1a1a1a;` +
-    `background:#f5f5f5;font-size:16px;line-height:1.5;color:#1a1a1a">${escapeHtml(text)}</blockquote>`
+    `<blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #14213d;` +
+    `background:#eef2f8;font-size:16px;line-height:1.5;color:#14213d">${escapeHtml(text)}</blockquote>`
   );
 }
 
@@ -135,7 +146,7 @@ export function shell(opts: {
 <body style="margin:0;padding:0;background:#ffffff;font-family:${FONT}">
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtml(opts.preheader)}</div>
 <div style="max-width:560px;margin:0 auto;padding:32px 20px">
-<p style="margin:0 0 24px;font-size:14px;font-weight:700;letter-spacing:.04em;color:#1a1a1a">JURYHOUR</p>
+${logoHeader(opts.ctx)}
 ${opts.bodyHtml}
 <hr style="border:none;border-top:1px solid #e5e5e5;margin:32px 0 16px">
 <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#666666">${escapeHtml(FOOTER_LINE)}</p>

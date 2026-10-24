@@ -26,7 +26,7 @@
 .num { font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
 
 .error {
-  color: var(--verdict, #b42318);
+  color: var(--verdict-ink, #b3261e);
   font-size: var(--text-14, 14px);
   font-weight: 600;
   margin: var(--space-2, 8px) 0 0;

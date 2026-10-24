@@ -1,19 +1,21 @@
-// Open Graph template (1200×630) for ImageResponse from "next/og": paper background, ink title in
-// Newsreader, mono eyebrow, the tally motif. Satori supports flexbox only and no CSS variables, so the
+// Open Graph template (1200×630) for ImageResponse from "next/og": brand Paper background, Ink title in
+// Newsreader, mono eyebrow, the tally motif, and the outlined JuryHour logo from the founder's kit
+// (inlined as an SVG data URI, so nothing is fetched at render time). Satori supports flexbox only and no CSS variables, so the
 // light-theme token values are inlined here (keep in sync with src/styles/tokens.css).
 import type { ReactElement } from "react";
+import { BRAND_INK, BRAND_PAPER, BRAND_SLASH, LOGO_HORIZONTAL, logoDataUri } from "./brand";
 
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 
 export const OG_COLORS = {
-  paper: "#f3f5f9",
+  paper: BRAND_PAPER,
   surface: "#ffffff",
-  ink: "#0e1a2e",
-  ink2: "#33425a",
-  muted: "#4f5e74",
-  rule: "#d5dce6",
-  ruleStrong: "#76839a",
-  verdict: "#b42318",
+  ink: BRAND_INK,
+  ink2: "#34425e",
+  muted: "#515e78",
+  rule: "#cbd4e1",
+  ruleStrong: "#6e7c95",
+  verdict: BRAND_SLASH,
   signal: "#1a6b40",
 } as const;
 
@@ -78,7 +80,7 @@ function titleSize(t: string): number {
 export function ogText(i: OgImageInput): [string, string] {
   const footer = i.footer ?? "Real people · real verdict · same day";
   const tally = i.tally ? `${i.tally.filled} of ${i.tally.total}` : "";
-  return [`${clampTitle(i.title)}JuryHour`, `${(i.eyebrow ?? "").toUpperCase()}${footer}${tally}0123456789`];
+  return [clampTitle(i.title), `${(i.eyebrow ?? "").toUpperCase()}${footer}${tally}0123456789`];
 }
 
 function TallyRow({ filled, total, color }: { filled: number; total: number; color: string }) {
@@ -112,27 +114,14 @@ function TallyRow({ filled, total, color }: { filled: number; total: number; col
   );
 }
 
-/** Tally-of-five glyph used as the brand mark. */
-function Glyph() {
-  return (
-    <div style={{ display: "flex", position: "relative", width: 40, height: 40 }}>
-      {[6, 14, 22, 30].map((x) => (
-        <div key={x} style={{ position: "absolute", left: x, top: 4, width: 4, height: 32, borderRadius: 2, background: OG_COLORS.ink }} />
-      ))}
-      <div
-        style={{
-          position: "absolute",
-          left: -2,
-          top: 18,
-          width: 44,
-          height: 4,
-          borderRadius: 2,
-          background: OG_COLORS.verdict,
-          transform: "rotate(-30deg)",
-        }}
-      />
-    </div>
-  );
+const LOGO_H = 44;
+const LOGO_W = Math.round((LOGO_HORIZONTAL.width / LOGO_HORIZONTAL.height) * LOGO_H);
+const LOGO_SRC = logoDataUri(LOGO_HORIZONTAL);
+
+/** The horizontal lockup (fullcolor: Ink + the red slash), never retyped. */
+function Logo() {
+  // eslint-disable-next-line @next/next/no-img-element -- Satori renders <img>, not next/image
+  return <img src={LOGO_SRC} width={LOGO_W} height={LOGO_H} alt="JuryHour" />;
 }
 
 /** JSX for `new ImageResponse(ogImage({...}), { ...OG_SIZE, fonts })`. */
@@ -155,10 +144,7 @@ export function ogImage(i: OgImageInput): ReactElement {
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Glyph />
-          <div style={{ display: "flex", fontFamily: DISPLAY, fontSize: 40, fontWeight: 500, letterSpacing: -0.5 }}>JuryHour</div>
-        </div>
+        <Logo />
         {i.eyebrow ? (
           <div style={{ display: "flex", fontFamily: MONO, fontSize: 22, letterSpacing: 2, color: OG_COLORS.muted }}>
             {i.eyebrow.toUpperCase()}

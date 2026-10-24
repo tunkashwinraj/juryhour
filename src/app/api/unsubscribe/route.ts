@@ -8,9 +8,9 @@ function page(status: number, title: string, message: string): Response {
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex"><title>${escapeHtml(title)} · JuryHour</title></head>
-<body style="margin:0;background:#ffffff;color:#1a1a1a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+<body style="margin:0;background:#ffffff;color:#14213d;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
 <main style="max-width:480px;margin:0 auto;padding:48px 16px">
-<p style="font-size:14px;font-weight:700;letter-spacing:.04em;margin:0 0 24px">JURYHOUR</p>
+<p style="margin:0 0 28px"><img src="/brand/svg/juryhour-horizontal-fullcolor.svg" width="139" height="24" alt="JuryHour" style="display:block;border:0"></p>
 <h1 style="font-size:24px;line-height:1.3;margin:0 0 12px">${escapeHtml(title)}</h1>
 <p style="font-size:16px;line-height:1.5;margin:0 0 32px">${escapeHtml(message)}</p>
 <p style="font-size:13px;color:#666666;margin:0">${escapeHtml(FOOTER_LINE)}</p>

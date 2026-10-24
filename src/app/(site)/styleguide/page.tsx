@@ -13,6 +13,7 @@ import {
   Field,
   Input,
   JurorQuote,
+  Logo,
   PriceCard,
   Scorecard,
   Tally,
@@ -37,12 +38,55 @@ const COLORS: { token: string; use: string }[] = [
   { token: "ink", use: "text, primary" },
   { token: "ink-2", use: "secondary text" },
   { token: "muted", use: "captions, labels" },
-  { token: "verdict", use: "stamp, winner" },
+  { token: "verdict", use: "stamp frame, winner marks" },
+  { token: "verdict-ink", use: "red text (errors, labels)" },
   { token: "verdict-wash", use: "verdict banner" },
   { token: "signal", use: "positive deltas" },
   { token: "signal-wash", use: "signal badge" },
   { token: "focus", use: "focus ring" },
 ];
+
+const BRAND_COLORS = [
+  { name: "Ink", hex: "#14213D", rgb: "20, 33, 61" },
+  { name: "Verdict red", hex: "#D8342C", rgb: "216, 52, 44" },
+  { name: "Paper", hex: "#EEF2F8", rgb: "238, 242, 248" },
+];
+
+/** Kit files (public/brand/svg) at their documented minimum widths, plus a comfortable size. */
+const LOGO_VERSIONS: { name: string; file: string; min: number; ratio: number; show: number }[] = [
+  { name: "Horizontal", file: "horizontal", min: 96, ratio: 833.09 / 144, show: 200 },
+  { name: "Stacked", file: "stacked", min: 56, ratio: 587.62 / 397.88, show: 120 },
+  { name: "Wordmark", file: "wordmark", min: 72, ratio: 587.62 / 114.38, show: 160 },
+  { name: "Symbol (4 strokes)", file: "symbol", min: 24, ratio: 56.25 / 44, show: 48 },
+  { name: "Small symbol (3 strokes)", file: "symbol-small", min: 16, ratio: 1, show: 24 },
+];
+
+function LogoPanel({ theme }: { theme: "light" | "dark" }) {
+  const variant = theme === "dark" ? "ondark" : "fullcolor";
+  return (
+    <div data-theme={theme} className={s.theme}>
+      <Eyebrow>{theme === "dark" ? "On Ink (ondark)" : "On Paper (fullcolor)"}</Eyebrow>
+      <div className={s.logoHero}>
+        <Logo height={40} />
+      </div>
+      <ul className={s.logos}>
+        {LOGO_VERSIONS.map((v) => (
+          <li key={v.file} className={s.logoItem}>
+            <div className={s.logoRow}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- static kit SVGs */}
+              <img src={`/brand/svg/juryhour-${v.file}-${variant}.svg`} alt="" width={v.show} height={Math.round(v.show / v.ratio)} />
+              {/* eslint-disable-next-line @next/next/no-img-element -- static kit SVGs */}
+              <img src={`/brand/svg/juryhour-${v.file}-${variant}.svg`} alt="" width={v.min} height={Math.round((v.min / v.ratio) * 10) / 10} />
+            </div>
+            <span className={s.caption}>
+              {v.name} · min {v.min}px wide
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 const SCALE = [64, 48, 36, 28, 22, 18, 16, 14, 12];
 
@@ -89,6 +133,30 @@ export default function StyleguidePage() {
               this page is the real component.
             </p>
           </header>
+
+          <section className={s.block} aria-labelledby="sg-brand">
+            <h2 id="sg-brand">Logo and brand colors</h2>
+            <p className="muted" style={{ maxWidth: "var(--measure)" }}>
+              Always the outlined files in <code>public/brand/</code> (never retype the name). Red is only ever the slash.
+              Clear space on every side = the cap height of &ldquo;JuryHour&rdquo;. The site header uses{" "}
+              <code>&lt;Logo /&gt;</code> (inline kit paths; ink follows the theme).
+            </p>
+            <ul className={s.brandColors}>
+              {BRAND_COLORS.map((c) => (
+                <li key={c.hex} className={s.brandColor}>
+                  <span className={s.brandChip} style={{ background: c.hex }} />
+                  <strong>{c.name}</strong>
+                  <span className={s.caption}>
+                    {c.hex} · rgb {c.rgb}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className={s.themes}>
+              <LogoPanel theme="light" />
+              <LogoPanel theme="dark" />
+            </div>
+          </section>
 
           <section className={s.block} aria-labelledby="sg-colors">
             <h2 id="sg-colors">Color</h2>
