@@ -140,15 +140,18 @@ describe("submit_test", () => {
     return seedPaidOrder({ stage: "RESEARCHING", preview_id: preview.id, ...over });
   };
 
-  it("success → tests row, QUOTING, Terac quote requested, researcher run completed", async () => {
+  it("success → tests row, QUOTING, panel priced instantly (no human quote), researcher run completed", async () => {
     const o = researching();
     fake.insert("agent_runs", { order_id: o.id, agent: "researcher", session_id: "s1", status: "fired" });
     const r = await call("submit_test", testBody(o.id));
-    expect(r.body).toMatchObject({ ok: true, data: { quote_requested: true } });
+    expect(r.body).toMatchObject({ ok: true, data: { priced: true } });
     expect(row("orders", o.id).stage).toBe("QUOTING");
-    expect(fake.rows("panels")[0]).toMatchObject({ status: "quoting", requested_n: 20 });
-    expect(m.requestQuote).toHaveBeenCalledWith(expect.objectContaining({ panelDescription: PROFILE.panel_description, submissionCount: 20 }));
-    expect(String(m.requestQuote.mock.calls[0][0].taskDescription).toLowerCase()).not.toContain("ledgerly");
+    expect(fake.rows("panels")[0]).toMatchObject({ status: "priced", requested_n: 20, terac_feasibility_id: null });
+    expect(fake.rows("panels")[0].terac_opportunity_id).toMatch(/^opp_/);
+    expect(m.requestQuote).not.toHaveBeenCalled();
+    expect(m.createOpportunity).toHaveBeenCalledWith(expect.objectContaining({ numParticipants: 20 }));
+    expect(m.createOpportunity.mock.calls[0][0].feasibilityRequestId).toBeUndefined();
+    expect(String(m.createOpportunity.mock.calls[0][0].description).toLowerCase()).not.toContain("ledgerly");
     expect(fake.rows("agent_runs")[0].status).toBe("completed");
   });
   it("wrong_stage", async () => await refused("submit_test", testBody(seedPaidOrder({ stage: "QUOTING" }).id), "wrong_stage", 409));
@@ -185,12 +188,13 @@ describe("submit_test", () => {
     expect(r.body.details.terms).toEqual(expect.arrayContaining(["10000", "QuickBooks"]));
     expect(fake.rows("tests")).toHaveLength(0);
   });
-  it("Terac not configured: test is stored, QUOTING, panel without feasibility id for the reconciler", async () => {
-    m.requestQuote.mockRejectedValue(new Error("TERAC_API_KEY is not configured"));
+  it("Terac not configured / not answering: test is stored, QUOTING, panel left quoting for the reconciler to retry", async () => {
+    m.createOpportunity.mockRejectedValue(new Error("TERAC_API_KEY is not configured"));
     const o = researching();
     const r = await call("submit_test", testBody(o.id));
-    expect(r.body).toMatchObject({ ok: true, data: { quote_requested: false } });
-    expect(fake.rows("panels")[0].terac_feasibility_id).toBeNull();
+    expect(r.body).toMatchObject({ ok: true, data: { priced: false } });
+    expect(fake.rows("panels")[0]).toMatchObject({ status: "quoting", terac_feasibility_id: null, terac_opportunity_id: null });
+    expect(events().some((e) => e.action === "instant_price_failed")).toBe(true);
   });
   it("injection text in the page never triggers actions", async () => {
     const o = researching();
@@ -227,11 +231,12 @@ describe("request_quote", () => {
     for (let i = 0; i < 3; i++) seedPanel(o, t, { status: "infeasible" });
     await refused("request_quote", { actor: "procurement", order_id: o.id }, "quote_limit", 429);
   });
-  it("retries a quote that was never requested", async () => {
+  it("retries instant pricing for a panel Terac never priced", async () => {
     const { o, p } = quoting({ panel: { status: "quoting", terac_feasibility_id: null } });
     const r = await call("request_quote", { actor: "procurement", order_id: o.id });
-    expect(r.body.data.retried).toBe(true);
-    expect(row("panels", p.id).terac_feasibility_id).toMatch(/^feas_/);
+    expect(r.body.data).toMatchObject({ retried: true, priced: true });
+    expect(row("panels", p.id)).toMatchObject({ status: "priced" });
+    expect(row("panels", p.id).terac_opportunity_id).toMatch(/^opp_/);
   });
 });
 

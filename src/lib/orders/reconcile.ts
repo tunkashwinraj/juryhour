@@ -38,6 +38,8 @@ import {
   recountPanel,
   rejectOrphanSubmission,
   requestPanelQuote,
+  instantPriceCoolingDown,
+  RECONCILE_PRICE_TIMEOUT_MS,
   retryPanelQuote,
   taskDescription,
 } from "./panel";
@@ -289,8 +291,14 @@ async function quotingStep(order: OrderRow, clock: Clock): Promise<string> {
     result = "quote requested";
   } else if (latest.status === "quoting") {
     if (!latest.terac_feasibility_id) {
-      await retryPanelQuote(order, latest, test);
-      result = "quote re-requested";
+      // Instant pricing (no human quote): retry the draft-pricing call, at most every few minutes.
+      if (await instantPriceCoolingDown(order, latest, clock.now.getTime())) {
+        result = "instant pricing pending";
+      } else if (await retryPanelQuote(order, latest, test, RECONCILE_PRICE_TIMEOUT_MS)) {
+        result = await tryLaunch(order, latest.created_at);
+      } else {
+        result = "instant pricing retry failed";
+      }
     } else {
       const q = await pollQuote(order, latest); // one getQuote per order per run
       if (q === "priced") result = await tryLaunch(order, latest.created_at);

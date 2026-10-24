@@ -72,10 +72,10 @@ export class TeracWebhookError extends Error {
 
 type Json = Record<string, unknown>;
 
-async function teracRequest<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: Json): Promise<T> {
+async function teracRequest<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: Json, timeoutMs = REQUEST_TIMEOUT_MS): Promise<T> {
   const key = need("TERAC_API_KEY");
   const headers: Record<string, string> = { Authorization: `Bearer ${key}`, Accept: "application/json" };
-  const init: RequestInit = { method, headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
+  const init: RequestInit = { method, headers, signal: AbortSignal.timeout(timeoutMs) };
   if (method === "POST" || method === "PATCH") {
     headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(body ?? {});
@@ -251,9 +251,12 @@ export async function createOpportunity(i: {
   testId: string;
   screeningQuestions: JurorProfile["screening_questions"];
   filters: JurorProfile["filters"];
+  /** Terac prices the draft during this call; it can take longer than ordinary requests. */
+  timeoutMs?: number;
 }): Promise<{ id: string; totalCostCents: number; affordable: boolean; costPerParticipantCents: number }> {
   const projectId = need("TERAC_PROJECT_ID");
-  const r = await teracRequest<OpportunityResponse>("POST", "/opportunities", buildOpportunityBody({ ...i, projectId }));
+  const { timeoutMs, ...fields } = i;
+  const r = await teracRequest<OpportunityResponse>("POST", "/opportunities", buildOpportunityBody({ ...fields, projectId }), timeoutMs);
   if (!r.pricing) {
     // Never report $0 cost: it would pass every margin check. The draft exists; caller may delete or retry.
     throw new TeracError(`Terac opportunity ${r.id} was created without pricing`, 200, "UNPRICED");

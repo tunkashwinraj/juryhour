@@ -236,7 +236,7 @@ const submitTestAction: Handler<"submit_test"> = async (input, ctx) => {
   const panel = await requestPanelQuote(order, test, { actor: ctx.actor });
   return {
     orderId: order.id,
-    data: { test_id: test.id, panel_id: panel.id, quote_requested: panel.terac_feasibility_id !== null, card_b_unverified: unverified },
+    data: { test_id: test.id, panel_id: panel.id, priced: panel.status === "priced", card_b_unverified: unverified },
   };
 };
 
@@ -250,14 +250,14 @@ const requestQuoteAction: Handler<"request_quote"> = async ({ order_id }, ctx) =
   const panels = await getPanels(order_id);
   if (panels.some((p) => p.status === "live")) refuse("panel_already_live", "this order already has a live panel", 409);
   const latest = panels[panels.length - 1];
-  if (latest?.status === "quoting" && latest.terac_feasibility_id) refuse("quote_pending", "a Terac quote is already pending", 409);
+  if (latest?.status === "quoting" && latest.terac_feasibility_id) refuse("quote_pending", "a legacy Terac quote is already pending", 409);
   if (latest?.status === "quoting" && !latest.terac_feasibility_id) {
-    await retryPanelQuote(order, latest, test);
-    return { orderId: order_id, data: { panel_id: latest.id, retried: true } };
+    const priced = await retryPanelQuote(order, latest, test);
+    return { orderId: order_id, data: { panel_id: latest.id, retried: true, priced } };
   }
   if (panels.length >= MAX_PANELS_PER_ORDER) refuse("quote_limit", `at most ${MAX_PANELS_PER_ORDER} quotes per order`, 429);
   const panel = await requestPanelQuote(order, test, { actor: ctx.actor });
-  return { orderId: order_id, data: { panel_id: panel.id, quote_requested: panel.terac_feasibility_id !== null } };
+  return { orderId: order_id, data: { panel_id: panel.id, priced: panel.status === "priced" } };
 };
 
 const launchPanelAction: Handler<"launch_panel"> = async ({ order_id, n }, ctx) => {
@@ -280,7 +280,7 @@ const broadenAudienceAction: Handler<"broaden_audience"> = async ({ order_id, ne
   must(await db().from("tests").update({ juror_profile: profile }).eq("id", test.id), "tests profile");
   for (const p of panels) if (p.status === "quoting" || p.status === "priced") await updatePanel(p.id, { status: "infeasible" });
   const panel = await requestPanelQuote(order, { ...test, juror_profile: profile }, { audienceBroadened: true, actor: ctx.actor });
-  return { orderId: order_id, data: { panel_id: panel.id, quote_requested: panel.terac_feasibility_id !== null } };
+  return { orderId: order_id, data: { panel_id: panel.id, priced: panel.status === "priced" } };
 };
 
 // ---------------------------------------------------------------- decide_submission

@@ -11,7 +11,6 @@ import {
   getTeracContext,
   launchOpportunity,
   rejectSubmission,
-  requestQuote,
   stopOpportunity,
 } from "@/lib/terac";
 import type { GraderResult } from "@/lib/types";
@@ -54,35 +53,31 @@ export function opportunityTitle(spec: PanelSpec): string {
 
 // ---------------------------------------------------------------- quotes
 
-/** Requests a Terac quote and records a `panels` row (status quoting). A failed request still records
- *  the row with no feasibility id; the reconciler retries it. */
+/** How long the pricing create may take when called inline (ops route has maxDuration 60s). */
+export const INSTANT_PRICE_TIMEOUT_MS = 40_000;
+/** Inside the 1-minute reconciler the call must stay short. */
+export const RECONCILE_PRICE_TIMEOUT_MS = 20_000;
+/** Minimum gap between automatic re-tries of instant pricing for one panel. */
+export const INSTANT_PRICE_RETRY_MINUTES = 3;
+
+/**
+ * Creates the order's panel row and prices it instantly: Terac estimates the price while creating a
+ * draft opportunity (a draft costs nothing and recruits no one). No human feasibility quote is used.
+ * If Terac doesn't answer in time the panel stays "quoting" and the reconciler retries.
+ */
 export async function requestPanelQuote(
   order: OrderRow,
   test: TestRow,
-  opts: { audienceBroadened?: boolean; actor?: string } = {},
+  opts: { audienceBroadened?: boolean; actor?: string; timeoutMs?: number } = {},
 ): Promise<PanelRow> {
   const spec = panelSpec(order);
-  let feasibilityId: string | null = null;
-  let failure: unknown = null;
-  try {
-    const q = await requestQuote({
-      taskDescription: taskDescription(spec),
-      panelDescription: test.juror_profile.panel_description,
-      submissionCount: spec.maxJurors,
-      timelineHours: Math.max(1, Math.round(spec.deadlineHours)),
-      loiMinutes: spec.minutes,
-    });
-    feasibilityId = q.id;
-  } catch (e) {
-    failure = e;
-  }
   const res = await db()
     .from("panels")
     .insert({
       order_id: order.id,
       test_id: test.id,
       mode: order.mode,
-      terac_feasibility_id: feasibilityId,
+      terac_feasibility_id: null,
       requested_n: spec.maxJurors,
       status: "quoting",
       audience_broadened: opts.audienceBroadened ?? false,
@@ -90,38 +85,79 @@ export async function requestPanelQuote(
     .select("*")
     .single();
   const panel = must(res, "panels insert") as PanelRow;
-  await logEventSafe({
-    order_id: order.id,
-    actor: "code",
-    action: "quote_requested",
-    reasoning: failure ? `Terac quote request failed: ${errMessage(failure)}` : "Requested Terac feasibility quote",
-    payload: { panel_id: panel.id, feasibility_id: feasibilityId, submission_count: spec.maxJurors, by: opts.actor ?? "code" },
-  });
-  if (failure) {
-    await incidentOnce(isNotConfigured(failure) ? "not_configured" : "terac_error", `requestQuote: ${errMessage(failure)}`, isNotConfigured(failure) ? null : order.id);
-  }
+  await priceInstantly(order, panel, test, { timeoutMs: opts.timeoutMs ?? INSTANT_PRICE_TIMEOUT_MS, by: opts.actor ?? "code" });
   return panel;
 }
 
-/** Retries the quote request for a panel that has no feasibility id yet. */
-export async function retryPanelQuote(order: OrderRow, panel: PanelRow, test: TestRow): Promise<boolean> {
-  const spec = panelSpec(order);
-  const q = await requestQuote({
-    taskDescription: taskDescription(spec),
-    panelDescription: test.juror_profile.panel_description,
-    submissionCount: panel.requested_n,
-    timelineHours: Math.max(1, Math.round(spec.deadlineHours)),
-    loiMinutes: spec.minutes,
-  });
-  await updatePanel(panel.id, { terac_feasibility_id: q.id });
-  await logEventSafe({ order_id: order.id, actor: "code", action: "quote_requested", reasoning: "Retried Terac quote request", payload: { panel_id: panel.id, feasibility_id: q.id } });
-  return true;
+/** Re-tries instant pricing for a panel that has no draft yet (ops request_quote / reconciler). */
+export async function retryPanelQuote(order: OrderRow, panel: PanelRow, test: TestRow, timeoutMs = INSTANT_PRICE_TIMEOUT_MS): Promise<boolean> {
+  return (await priceInstantly(order, panel, test, { timeoutMs, by: "code" })) === "priced";
 }
 
-/** One getQuote call. Records the price or infeasibility on the panel. */
-/** How long a feasibility quote may sit with a person before we price a draft instead. */
-export const QUOTE_FALLBACK_MINUTES = 10;
+/** True when the last instant-pricing attempt for this panel failed less than INSTANT_PRICE_RETRY_MINUTES ago. */
+export async function instantPriceCoolingDown(order: OrderRow, panel: PanelRow, nowMs = Date.now()): Promise<boolean> {
+  const res = await db().from("events").select("payload, created_at").eq("order_id", order.id).eq("action", "instant_price_failed");
+  return (res.data ?? []).some(
+    (e: { payload: { panel_id?: string } | null; created_at: string }) =>
+      e.payload?.panel_id === panel.id && nowMs - new Date(e.created_at).getTime() < INSTANT_PRICE_RETRY_MINUTES * 60_000,
+  );
+}
 
+/**
+ * One instant-pricing attempt: create the draft without a feasibility id, record the price on the
+ * panel. The launch path applies the cost cap and the 30% margin floor before anything is charged.
+ */
+export async function priceInstantly(
+  order: OrderRow,
+  panel: PanelRow,
+  test: TestRow,
+  opts: { timeoutMs: number; by: string },
+): Promise<"priced" | "pending"> {
+  const spec = panelSpec(order);
+  const n = panel.requested_n || spec.maxJurors;
+  const t0 = Date.now();
+  let opp: Awaited<ReturnType<typeof createOpportunity>>;
+  try {
+    opp = await createOpportunity({
+      title: opportunityTitle(spec),
+      numParticipants: n,
+      businessType: test.juror_profile.business_type,
+      description: taskDescription(spec),
+      durationMinutes: spec.minutes,
+      testId: test.id,
+      screeningQuestions: test.juror_profile.screening_questions ?? [],
+      filters: order.tier === "specialist" ? (test.juror_profile.filters ?? []) : [],
+      timeoutMs: opts.timeoutMs,
+    });
+  } catch (e) {
+    await logEventSafe({
+      order_id: order.id,
+      actor: "code",
+      action: "instant_price_failed",
+      reasoning: `Terac did not price the draft (${errMessage(e)}); retrying in ${INSTANT_PRICE_RETRY_MINUTES} min`,
+      payload: { panel_id: panel.id, seconds: Math.round((Date.now() - t0) / 1000), by: opts.by },
+    });
+    if (isNotConfigured(e)) await incidentOnce("not_configured", `createOpportunity: ${errMessage(e)}`, null);
+    return "pending";
+  }
+  const total = round2(opp.totalCostCents / 100);
+  const cpi = round2(opp.costPerParticipantCents ? opp.costPerParticipantCents / 100 : total / n);
+  await updatePanel(panel.id, { cost_per_participant: cpi, status: "priced", terac_opportunity_id: opp.id, requested_n: n, budget_usd: total });
+  panel.cost_per_participant = cpi;
+  panel.status = "priced";
+  panel.terac_opportunity_id = opp.id;
+  panel.requested_n = n;
+  await logEventSafe({
+    order_id: order.id,
+    actor: "code",
+    action: "quote_priced",
+    reasoning: `Terac priced the panel instantly: $${cpi} per juror ($${total} for ${n}) in ${Math.round((Date.now() - t0) / 1000)}s`,
+    payload: { panel_id: panel.id, opportunity_id: opp.id, n, total, cpi, affordable: opp.affordable, instant: true },
+  });
+  return "priced";
+}
+
+/** Legacy: panels created before instant pricing carry a feasibility id; one getQuote call. */
 export async function pollQuote(order: OrderRow, panel: PanelRow): Promise<"priced" | "pending" | "infeasible"> {
   if (!panel.terac_feasibility_id) return "pending";
   const q = await getQuote(panel.terac_feasibility_id);
@@ -144,65 +180,7 @@ export async function pollQuote(order: OrderRow, panel: PanelRow): Promise<"pric
     await logEventSafe({ order_id: order.id, actor: "code", action: "quote_infeasible", reasoning: `Terac quote status ${q.status}`, payload: { panel_id: panel.id, status: q.status } });
     return "infeasible";
   }
-  const askedAt = new Date(panel.created_at ?? order.stage_entered_at).getTime();
-  if (Date.now() - askedAt > QUOTE_FALLBACK_MINUTES * 60_000 && !panel.terac_opportunity_id) {
-    return estimateViaDraft(order, panel);
-  }
   return "pending";
-}
-
-/**
- * Terac prices feasibility requests "automatically within seconds or by routing it to a person".
- * When it went to a person and nobody has answered after QUOTE_FALLBACK_MINUTES, create the draft
- * opportunity WITHOUT a feasibility id: Terac then prices it during the create call (a draft costs
- * nothing and recruits no one). The launch path still applies every cap and the 30% margin floor to
- * this price before anything is charged.
- */
-async function estimateViaDraft(order: OrderRow, panel: PanelRow): Promise<"priced" | "pending"> {
-  const test = await getTestById(panel.test_id);
-  if (!test) return "pending";
-  // One try per panel: a failed create can still leave a draft at Terac, so never retry every minute.
-  const tried = await db().from("events").select("payload").eq("order_id", order.id).eq("action", "quote_estimate_failed");
-  if ((tried.data ?? []).some((e: { payload: { panel_id?: string } | null }) => e.payload?.panel_id === panel.id)) return "pending";
-  const spec = panelSpec(order);
-  const n = spec.maxJurors;
-  let opp: Awaited<ReturnType<typeof createOpportunity>>;
-  try {
-    opp = await createOpportunity({
-    title: opportunityTitle(spec),
-    numParticipants: n,
-    businessType: test.juror_profile.business_type,
-    description: taskDescription(spec),
-    durationMinutes: spec.minutes,
-    testId: test.id,
-    screeningQuestions: test.juror_profile.screening_questions ?? [],
-    filters: order.tier === "specialist" ? (test.juror_profile.filters ?? []) : [],
-    });
-  } catch (e) {
-    await logEventSafe({
-      order_id: order.id,
-      actor: "code",
-      action: "quote_estimate_failed",
-      reasoning: `Terac could not price a draft either: ${errMessage(e)}; waiting for the human quote, then procurement/refund timeline`,
-      payload: { panel_id: panel.id },
-    });
-    return "pending";
-  }
-  const total = round2(opp.totalCostCents / 100);
-  const cpi = round2(opp.costPerParticipantCents ? opp.costPerParticipantCents / 100 : total / n);
-  await updatePanel(panel.id, { cost_per_participant: cpi, status: "priced", terac_opportunity_id: opp.id, requested_n: n, budget_usd: total });
-  panel.cost_per_participant = cpi;
-  panel.status = "priced";
-  panel.terac_opportunity_id = opp.id;
-  panel.requested_n = n;
-  await logEventSafe({
-    order_id: order.id,
-    actor: "code",
-    action: "quote_estimated",
-    reasoning: `Terac's quote was still with a person after ${QUOTE_FALLBACK_MINUTES} min; Terac priced a draft instantly at ${cpi} per juror (${total} for ${n})`,
-    payload: { panel_id: panel.id, opportunity_id: opp.id, n, total, cpi, affordable: opp.affordable },
-  });
-  return "priced";
 }
 
 // ---------------------------------------------------------------- launch
@@ -226,7 +204,6 @@ export async function launchPanel(orderId: string, opts: { n?: number | null; ac
   if (!panel) refuse("quote_not_ready", "no Terac quote has been requested yet", 409);
   if (panel.status === "infeasible") refuse("quote_infeasible", "Terac could not quote this audience; broaden it or refund", 422);
   if (panel.status !== "priced" || panel.cost_per_participant === null) refuse("quote_not_ready", "the Terac quote has not been answered yet", 409);
-  if (!panel.terac_feasibility_id) refuse("quote_not_ready", "panel has no feasibility request id", 409);
 
   const spec = panelSpec(order);
   const cpi = Number(panel.cost_per_participant);
@@ -255,8 +232,8 @@ export async function launchPanel(orderId: string, opts: { n?: number | null; ac
         numParticipants: n,
         businessType: test.juror_profile.business_type,
         description: taskDescription(spec),
-        // After an instant estimate the feasibility request may still be unanswered: let Terac re-estimate.
-        feasibilityRequestId: panel.terac_opportunity_id ? undefined : panel.terac_feasibility_id,
+        // Legacy panels reuse their answered feasibility quote; instant-priced panels let Terac re-estimate.
+        feasibilityRequestId: panel.terac_opportunity_id ? undefined : (panel.terac_feasibility_id ?? undefined),
         durationMinutes: spec.minutes,
         testId: test.id,
         screeningQuestions: test.juror_profile.screening_questions ?? [],

@@ -169,37 +169,13 @@ describe("QUOTING", () => {
     expect(runs("procurement")).toHaveLength(0);
   });
 
-  it("quote still with a person after 10 min → Terac prices a draft instantly → launch with the same checks", async () => {
+  it("legacy feasibility quote still pending → keeps polling (no human-quote fallback any more)", async () => {
     m.getQuote.mockImplementation(async (id: string) => ({ id, status: "RECEIVED", costPerParticipant: null }));
-    const { o, p } = quoting();
-    at(5);
-    await runReconcile();
-    expect(m.createOpportunity).not.toHaveBeenCalled();
-    expect(stage(o)).toBe("QUOTING");
-    at(11);
-    await runReconcile();
-    // first create has no feasibility id (Terac estimates); the launch reuses that draft
-    expect(m.createOpportunity).toHaveBeenCalledTimes(1);
-    expect(m.createOpportunity.mock.calls[0][0].feasibilityRequestId).toBeUndefined();
-    expect(row("panels", p.id).terac_opportunity_id).toMatch(/^opp_/);
-    expect(m.launchOpportunity).toHaveBeenCalledWith(row("panels", p.id).terac_opportunity_id);
-    expect(stage(o)).toBe("PANEL_LIVE");
-    expect(fake.rows("events").some((e) => e.action === "quote_estimated" && e.order_id === o.id)).toBe(true);
-  });
-
-  it("instant estimate above the cost cap → not launched; procurement takes over at 90 min", async () => {
-    m.getQuote.mockImplementation(async (id: string) => ({ id, status: "RECEIVED", costPerParticipant: null }));
-    m.createOpportunity.mockImplementation(async (i: { numParticipants: number }) => ({
-      id: `opp_dear_${i.numParticipants}`, totalCostCents: i.numParticipants * 5000, costPerParticipantCents: 5000, affordable: true,
-    }));
     const { o } = quoting();
     at(11);
     await runReconcile();
+    expect(m.createOpportunity).not.toHaveBeenCalled();
     expect(stage(o)).toBe("QUOTING");
-    expect(m.launchOpportunity).not.toHaveBeenCalled();
-    at(91);
-    await runReconcile();
-    expect(runs("procurement")).toHaveLength(1);
   });
 
   it("> 90 min → procurement; > 110 min → full refund (infeasible) → REFUNDED", async () => {
@@ -216,10 +192,21 @@ describe("QUOTING", () => {
     expect(m.refundPayment).toHaveBeenCalledTimes(1);
   });
 
-  it("panel without feasibility id (Terac was down) → quote re-requested", async () => {
-    const { p } = quoting({ terac_feasibility_id: null });
+  it("instant pricing: unpriced panel → reconciler prices the draft and launches; a failed try cools down", async () => {
+    const { o, p } = quoting({ terac_feasibility_id: null });
+    m.createOpportunity.mockRejectedValueOnce(new Error("The operation was aborted due to timeout"));
     await runReconcile();
-    expect(row("panels", p.id).terac_feasibility_id).toMatch(/^feas_/);
+    expect(stage(o)).toBe("QUOTING");
+    expect(fake.rows("events").some((e) => e.action === "instant_price_failed" && e.order_id === o.id)).toBe(true);
+    at(1);
+    await runReconcile(); // within the retry cool-down: no new Terac call
+    expect(m.createOpportunity).toHaveBeenCalledTimes(1);
+    at(4);
+    await runReconcile();
+    // priced, then launched (the launch re-estimates if the cost cap shrinks the panel)
+    expect(m.createOpportunity.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(row("panels", p.id).terac_opportunity_id).toMatch(/^opp_/);
+    expect(stage(o)).toBe("PANEL_LIVE");
   });
 });
 
