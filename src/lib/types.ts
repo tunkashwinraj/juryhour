@@ -13,7 +13,8 @@ export const Stage = z.enum([
 export type Stage = z.infer<typeof Stage>;
 
 export const Tier = z.enum(TIER_NAMES as [TierName, ...TierName[]]);
-export const Addon = z.enum(["extra5", "rush", "secondPage"] satisfies AddonName[]);
+// secondPage is not sold yet: fulfilling it needs a second test per order (not built).
+export const Addon = z.enum(["extra5", "rush"] satisfies AddonName[]);
 export const TestFormat = z.enum(["spark", "pulse", "proof", "specialist"]);
 export type TestFormat = z.infer<typeof TestFormat>;
 
@@ -44,7 +45,7 @@ export const ScreeningQuestion = z.object({
 export const JurorProfile = z.object({
   panel_description: z.string().min(10).max(400), // ≤ 2 sentences, never the product name
   business_type: z.enum(["b2c", "b2b"]),
-  screening_questions: z.array(ScreeningQuestion).max(2),
+  screening_questions: z.array(ScreeningQuestion).min(1).max(2), // Terac launch requires ≥ 1
   filters: z.array(z.object({ slug: z.string(), options: z.array(z.string()).min(1) })).default([]), // specialist only
 });
 export type JurorProfile = z.infer<typeof JurorProfile>;

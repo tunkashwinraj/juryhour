@@ -1,31 +1,36 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
 export const metadata: Metadata = {
-  title: "JuryHour | Modern Courtroom and Deliberation Intelligence Platform",
-  description: "Precision jury analytics, real-time deliberation tracking, straw poll consensus, and courtroom exhibit vault for high-stakes legal proceedings.",
-  keywords: ["jury deliberation", "voir dire", "courtroom analytics", "legal tech", "straw poll", "jury management"],
+  ...(appUrl ? { metadataBase: new URL(appUrl) } : {}),
+  title: {
+    default: "JuryHour: real buyers, real verdict, before you launch",
+    template: "%s · JuryHour",
+  },
+  description:
+    "Paste your landing page. Real people who match your buyer judge it against an AI rewrite and tell you which one wins. From $11, same day. Directional signal from real people, not a sales guarantee.",
+  openGraph: {
+    title: "JuryHour: real buyers, real verdict, before you launch",
+    description: "Before you spend $1,000 on ads, spend $11 to see if real people get your page.",
+    type: "website",
+  },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = {
+  themeColor: "#FBFBFC",
+  colorScheme: "light",
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+    <html lang="en">
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

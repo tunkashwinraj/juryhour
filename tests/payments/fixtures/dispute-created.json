@@ -1,0 +1,18 @@
+{
+  "id": "msg_4tUy9pZ3cSh2Ax5NmU0dV6eF",
+  "type": "dispute.created",
+  "api_version": "v1",
+  "api_version_date": "2026-07-01",
+  "timestamp": "2026-10-24T14:00:00.000Z",
+  "company_id": "biz_sbx",
+  "data": {
+    "id": "dspt_xxxxxxxxxxxxx",
+    "amount": 149.0,
+    "currency": "usd",
+    "status": "needs_response",
+    "editable": true,
+    "needs_response_by": "2026-11-01T00:00:00.000Z",
+    "company": { "id": "biz_sbx", "title": "JuryHour (sandbox)" },
+    "payment": { "id": "pay_8kQ2mN4rT6vW1x", "currency": "usd", "total": 149.0 }
+  }
+}

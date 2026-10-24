@@ -1,0 +1,24 @@
+{
+  "id": "msg_3sTx8oY2bRg1Zw4MlT9cU5dE",
+  "type": "refund.created",
+  "api_version": "v1",
+  "api_version_date": "2026-07-01",
+  "timestamp": "2026-10-24T13:00:00.000Z",
+  "company_id": "biz_sbx",
+  "data": {
+    "id": "rf_xxxxxxxxxxxxxxx",
+    "amount": 49.67,
+    "currency": "usd",
+    "status": "pending",
+    "created_at": "2026-10-24T13:00:00.000Z",
+    "provider": "stripe",
+    "metadata": {},
+    "payment": {
+      "id": "pay_8kQ2mN4rT6vW1x",
+      "currency": "usd",
+      "total": 149.0,
+      "usd_total": 149.0,
+      "metadata": { "order_id": "11111111-1111-4111-8111-111111111111" }
+    }
+  }
+}
