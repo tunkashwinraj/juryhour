@@ -22,8 +22,13 @@ const cases: Case[] = [
   { name: "Verdict + LAUNCH20", body: { tier: "proof", code: "LAUNCH20" }, expect: { price: 239, promo: "LAUNCH20" } },
   { name: "Verdict + LAUNCH20 + 5 extra", body: { tier: "proof", code: "LAUNCH20", extra_jurors: 5 }, expect: { price: 319, extra: 5 } },
   { name: "Quick Read + 20 extra", body: { tier: "spark", extra_jurors: 20 }, expect: { price: 369, extra: 20 } },
-  { name: "HALF retired", body: { tier: "proof", code: "HALF" }, expect: { code: "coupon_unknown" } },
-  { name: "LAUNCH20 on Quick Read", body: { tier: "spark", code: "LAUNCH20" }, expect: { code: "coupon_not_applicable" } },
+  // `code` (from ad links) is attribution: never blocks a sale, never discounts wrongly
+  { name: "ad code HALF (retired)", body: { tier: "proof", code: "HALF" }, expect: { price: 299, promo: "HALF" } },
+  { name: "ad code LAUNCH20 on Quick Read", body: { tier: "spark", code: "LAUNCH20" }, expect: { price: 49 } },
+  // `coupon` (typed by the buyer) is strict
+  { name: "typed coupon HALF", body: { tier: "proof", coupon: "HALF" }, expect: { code: "coupon_unknown" } },
+  { name: "typed LAUNCH20 on Quick Read", body: { tier: "spark", coupon: "LAUNCH20" }, expect: { code: "coupon_not_applicable" } },
+  { name: "typed LAUNCH20 on Verdict", body: { tier: "proof", coupon: "LAUNCH20" }, expect: { price: 239, promo: "LAUNCH20" } },
   { name: "21 extra jurors", body: { tier: "spark", extra_jurors: 21 }, expect: { code: "extra_jurors_out_of_range" } },
   { name: "Retired tier", body: { tier: "pulse" }, expect: { code: "tier_not_offered" } },
 ];
