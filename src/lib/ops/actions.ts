@@ -3,7 +3,7 @@
 // src/lib/orders/*. Untrusted text (page text, juror answers, emails) is only ever stored or passed
 // along as data; nothing here interprets it.
 import { REPORT_CAVEAT, MARGIN_FLOOR, TIERS } from "@/lib/constants";
-import { revalidateTag } from "next/cache";
+import { refreshTag } from "@/lib/cache-tags";
 import { db, must } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { env } from "@/lib/env";
@@ -367,11 +367,7 @@ const changePriceAction: Handler<"change_price"> = async ({ tier, price }, ctx) 
   if (upd.error) throw new Error(`prices update: ${upd.error.message}`);
   if (!upd.data || upd.data.length === 0) refuse("price_changed_recently", "the price changed concurrently", 409);
   // The landing page prerenders cached prices (tag "prices"); refresh them so the shown price matches checkout.
-  try {
-    revalidateTag("prices", "max");
-  } catch {
-    /* outside a request (tests/scripts): nothing cached to refresh */
-  }
+  refreshTag("prices");
   return { data: { tier, old_price: Number(row!.current_usd), new_price: p } };
 };
 

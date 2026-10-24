@@ -1,0 +1,205 @@
+/*
+ * JuryHour design tokens (docs/WEBSITE_SPEC.md §3, owned by Website Agent A).
+ *
+ * Concept "the verdict": cool paper, ink navy, one stamp red used sparingly, one calm green for winners.
+ * Light is the default; dark follows `prefers-color-scheme` unless an ancestor sets
+ * `data-theme="light"`. `data-theme="dark"|"light"` on any element forces that theme for its subtree
+ * (the /styleguide renders both side by side this way).
+ *
+ * WCAG contrast (computed with src/styles/contrast.ts; enforced by tests/website/a/contrast.test.ts).
+ * Text needs >= 4.5:1, UI boundaries / meaningful graphics >= 3:1.
+ *
+ *   LIGHT                         paper   surface  wash        DARK                          paper   surface  wash
+ *   --ink (text)                  15.95   17.41    14.69       --ink (text)                  15.83   14.48    12.80
+ *   --ink-2 (secondary text)       9.31   10.16     8.57       --ink-2                       11.49   10.52     9.29
+ *   --muted (tertiary text)        6.04    6.59     5.56       --muted                        7.65    7.00     6.19
+ *   --verdict (text/marks)         6.02    6.57     5.54       --verdict                      8.12    7.43     6.57
+ *   --signal (text/marks)          5.97    6.52     5.50       --signal                       9.77    8.94     7.90
+ *   --focus (ring, 3:1 needed)     5.79    6.32     5.33       --focus                        8.87    8.12     7.18
+ *   --rule-strong (input border)   3.50    3.82     3.22       --rule-strong                  3.78    3.46     3.06
+ *   --on-ink on --ink (primary btn)          15.95             --on-ink on --ink                     15.83
+ *   --on-ink on --ink-hover                  11.79             --on-ink on --ink-hover               12.22
+ *   --verdict on --verdict-wash               5.69             --verdict on --verdict-wash            6.89
+ *   --signal on --signal-wash                 5.70             --signal on --signal-wash              7.39
+ *   --warn-ink on --warn-wash                 6.67             --warn-ink on --warn-wash              9.03
+ *   --on-verdict on --verdict                 6.02             --on-verdict on --verdict              8.12
+ *
+ * --rule (hairlines) is decorative separation only and is never the sole carrier of meaning.
+ */
+
+:root,
+[data-theme="light"] {
+  /* ---- color: surfaces */
+  --paper: #f3f5f9; /* cool, blue-tinted off-white page background */
+  --surface: #ffffff; /* cards, inputs, raised objects */
+  --wash: #e8ecf2; /* quiet fills: table stripes, quote blocks, segmented track */
+  --rule: #d5dce6; /* hairline borders */
+  --rule-strong: #76839a; /* input borders, outlined tally marks (>= 3:1) */
+
+  /* ---- color: text */
+  --ink: #0e1a2e; /* deep ink navy */
+  --ink-2: #33425a; /* secondary text */
+  --muted: #4f5e74; /* blue-grey tertiary text, captions, mono labels */
+  --on-ink: #f3f5f9; /* text on --ink fills */
+  --ink-hover: #22324d; /* primary button hover */
+
+  /* ---- color: accents (sparingly) */
+  --verdict: #b42318; /* stamp red: stamp, winner tally, one CTA state */
+  --verdict-wash: #fbebe9;
+  --on-verdict: #f3f5f9;
+  --signal: #1a6b40; /* calm green: winner deltas, positive scores */
+  --signal-wash: #e5f3eb;
+  --warn-ink: #7a4a00;
+  --warn-wash: #fdf1d6;
+  --warn-rule: #c99a2e;
+  --focus: #1d55d6; /* focus ring */
+
+  --shadow-raised: 0 1px 0 rgb(14 26 46 / 0.04), 0 10px 24px -18px rgb(14 26 46 / 0.35);
+  --backdrop: rgb(243 245 249 / 0.86);
+  --scrim: rgb(14 26 46 / 0.4);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0c1422; /* ink background */
+    --surface: #131d2f;
+    --wash: #1a2740;
+    --rule: #26344b;
+    --rule-strong: #62728c;
+
+    --ink: #e9eef6; /* paper text */
+    --ink-2: #c3cddc;
+    --muted: #9aa8bd;
+    --on-ink: #0c1422;
+    --ink-hover: #c9d3e3;
+
+    --verdict: #ff8b7e;
+    --verdict-wash: #3a1a1a;
+    --on-verdict: #0c1422;
+    --signal: #6cd09a;
+    --signal-wash: #123222;
+    --warn-ink: #f5c46b;
+    --warn-wash: #332710;
+    --warn-rule: #8a6a24;
+    --focus: #8db4ff;
+
+    --shadow-raised: 0 1px 0 rgb(0 0 0 / 0.3), 0 12px 28px -18px rgb(0 0 0 / 0.7);
+    --backdrop: rgb(12 20 34 / 0.84);
+    --scrim: rgb(0 0 0 / 0.6);
+
+    color-scheme: dark;
+  }
+}
+
+[data-theme="dark"] {
+  --paper: #0c1422;
+  --surface: #131d2f;
+  --wash: #1a2740;
+  --rule: #26344b;
+  --rule-strong: #62728c;
+
+  --ink: #e9eef6;
+  --ink-2: #c3cddc;
+  --muted: #9aa8bd;
+  --on-ink: #0c1422;
+  --ink-hover: #c9d3e3;
+
+  --verdict: #ff8b7e;
+  --verdict-wash: #3a1a1a;
+  --on-verdict: #0c1422;
+  --signal: #6cd09a;
+  --signal-wash: #123222;
+  --warn-ink: #f5c46b;
+  --warn-wash: #332710;
+  --warn-rule: #8a6a24;
+  --focus: #8db4ff;
+
+  --shadow-raised: 0 1px 0 rgb(0 0 0 / 0.3), 0 12px 28px -18px rgb(0 0 0 / 0.7);
+  --backdrop: rgb(12 20 34 / 0.84);
+  --scrim: rgb(0 0 0 / 0.6);
+
+  color-scheme: dark;
+}
+
+:root {
+  /* ---- type families (next/font variables are set on <html> by src/styles/fonts.ts) */
+  --font-display: var(--font-newsreader), "Iowan Old Style", "Charter", Georgia, serif;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* ---- type scale: 12 / 14 / 16 / 18 / 22 / 28 / 36 / 48 / 64 */
+  --text-12: 0.75rem;
+  --text-14: 0.875rem;
+  --text-16: 1rem;
+  --text-18: 1.125rem;
+  --text-22: 1.375rem;
+  --text-28: 1.75rem;
+  --text-36: 2.25rem;
+  --text-48: 3rem;
+  --text-64: 4rem;
+  /* fluid steps for display headings (min at 360px, max at ~1200px) */
+  --text-h1: clamp(var(--text-36), 1.6rem + 3.4vw, var(--text-64));
+  --text-h2: clamp(var(--text-28), 1.35rem + 1.6vw, var(--text-48));
+  --text-h3: var(--text-22);
+
+  --leading-tight: 1.08;
+  --leading-snug: 1.25;
+  --leading-body: 1.6;
+  --tracking-display: -0.015em;
+  --tracking-mono: 0.06em;
+
+  /* ---- line lengths */
+  --measure: 65ch;
+  --measure-narrow: 45ch;
+  --measure-wide: 75ch;
+
+  /* ---- spacing (4px base) */
+  --space-1: 0.25rem; /* 4 */
+  --space-2: 0.5rem; /* 8 */
+  --space-3: 0.75rem; /* 12 */
+  --space-4: 1rem; /* 16 */
+  --space-5: 1.5rem; /* 24 */
+  --space-6: 2rem; /* 32 */
+  --space-7: 3rem; /* 48 */
+  --space-8: 4rem; /* 64 */
+  --space-9: 6rem; /* 96 */
+  --space-10: 8rem; /* 128 */
+  --section-y: clamp(var(--space-7), 4rem + 2vw, var(--space-9));
+
+  /* ---- layout: 12-column grid, ~1200px content */
+  --container: 1200px;
+  --container-narrow: 760px;
+  --gutter: 16px;
+  --grid-gap: clamp(16px, 2.5vw, 32px);
+  --header-h: 64px;
+
+  /* ---- radii (restrained) */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* ---- motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+  --dur-slow: 420ms;
+
+  /* ---- focus */
+  --focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--focus);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --gutter: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --gutter: 32px;
+    --header-h: 72px;
+  }
+}

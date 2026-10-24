@@ -1,16 +1,11 @@
-// GET /api/og/verdict/[ref] — 1200×630 verdict share card.
+// GET /api/og/verdict/[ref] — 1200×630 verdict share card (same template as /api/og).
 // `ref` is the order token (owner) or the order id (public cards on the landing page).
-// Access rule: see canViewOg in src/components/rules.ts.
+// Access rule: see canViewOg in src/components/rules.ts (unchanged by the redesign).
 import { ImageResponse } from "next/og";
 import { getOgOrder } from "@/lib/queries";
-import { canViewOg, tallyMarks } from "@/components/rules";
+import { canViewOg } from "@/components/rules";
 import { log, rid } from "@/components/api";
-
-const INK = "#16181D";
-const MUTED = "#5A6070";
-const PAPER = "#FBFBFC";
-const ACCENT = "#2346D8";
-const RULE = "#D9DCE3";
+import { OG_SIZE, loadOgFonts, ogImage, ogText, type OgImageInput } from "@/components/ui/og";
 
 export async function GET(req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token: ref } = await ctx.params;
@@ -29,60 +24,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ token: string }
 
   const r = order.report;
   const n = r.scorecard.n_approved;
-  const hasAB = r.scorecard.prefer_a !== null && r.scorecard.prefer_b !== null && r.winner !== null;
-  const marks = hasAB ? tallyMarks(r.scorecard.prefer_a, r.scorecard.prefer_b, n) : [];
-  const verdict = r.headline_verdict.length > 90 ? r.headline_verdict.slice(0, 87) + "…" : r.headline_verdict;
+  const a = r.scorecard.prefer_a;
+  const b = r.scorecard.prefer_b;
+  const hasAB = a !== null && b !== null && r.winner !== null;
+  // Winner's votes filled out of everyone heard (the tally motif); no tally for single-version tiers.
+  const winnerVotes = hasAB ? (r.winner === "B" ? b : r.winner === "A" ? a : Math.max(a, b)) : 0;
+  const input: OgImageInput = {
+    title: r.headline_verdict,
+    eyebrow: "The verdict",
+    tally: hasAB && n > 0 && n <= 40 ? { filled: winnerVotes, total: n } : undefined,
+    footer: `${n} real ${n === 1 ? "person" : "people"} · directional, not a guarantee`,
+  };
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          background: PAPER,
-          color: INK,
-          padding: "64px 72px",
-          borderTop: `16px solid ${ACCENT}`,
-        }}
-      >
-        <div style={{ display: "flex", fontSize: 30, color: MUTED }}>The verdict</div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", fontSize: verdict.length > 50 ? 56 : verdict.length > 22 ? 68 : 84, fontWeight: 700, lineHeight: 1.08, letterSpacing: -1.5 }}>
-            {verdict}
-          </div>
-          {marks.length > 0 && marks.length <= 40 ? (
-            <div style={{ display: "flex", marginTop: 36, gap: 10 }}>
-              {marks.map((m, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    width: 26,
-                    height: 56,
-                    borderRadius: 4,
-                    background: m === "B" ? ACCENT : m === "A" ? INK : "transparent",
-                    border: m === "none" ? `3px solid ${RULE}` : "none",
-                  }}
-                />
-              ))}
-            </div>
-          ) : null}
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-          <div style={{ display: "flex", fontSize: 36 }}>
-            {`${n} real ${n === 1 ? "person" : "people"} · directional signal, not a guarantee`}
-          </div>
-          <div style={{ display: "flex", fontSize: 40, fontWeight: 700, color: ACCENT }}>JuryHour</div>
-        </div>
-      </div>
-    ),
-    {
-      width: 1200,
-      height: 630,
-      headers: { "Cache-Control": order.report_public ? "public, max-age=300" : "private, no-store" },
-    },
-  );
+  const [displayText, monoText] = ogText(input);
+  const fonts = await loadOgFonts(displayText, monoText);
+  return new ImageResponse(ogImage(input), {
+    ...OG_SIZE,
+    fonts,
+    headers: { "Cache-Control": order.report_public ? "public, max-age=300" : "private, no-store" },
+  });
 }

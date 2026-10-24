@@ -1,101 +1,60 @@
-import { Suspense } from "react";
-import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
-import { LandingApp } from "@/components/landing/LandingApp";
-import { getLandingData, getShellPrices, type LandingData } from "@/lib/queries";
-import { TIERS, type TierName } from "@/lib/constants";
+// Home (docs/WEBSITE_SPEC.md §5). Static shell: prices and the launch offer come from a cached read
+// (constants fallback, never a loading state); live counters are cached and behind <Suspense>.
+// The launch-offer bar (§5.1) and header/footer come from the (site) layout.
+import type { Metadata } from "next";
+import { JsonLd, faqLd, organizationLd, pageMetadata, productOffersLd, websiteLd } from "@/lib/seo";
+import { getPricingSnapshot } from "@/lib/marketing-data";
+import { PricingSection } from "@/components/pricing/PricingSection";
+import { SPECIALIST_FROM_USD, usd } from "@/components/pricing/pricing-data";
+import {
+  CompareSnippet,
+  FinalCta,
+  Hero,
+  HomeFaq,
+  HowItWorks,
+  Problem,
+  TrustStrip,
+  WhatYouGet,
+  WhoFor,
+  ZeroEmployees,
+} from "@/components/marketing/HomeSections";
+import { HOME_FAQ } from "@/components/marketing/home-content";
+import { BUYABLE_TIERS, TIERS } from "@/lib/constants";
 
-/** DB trouble must never take the landing page down: fall back to constant prices. */
-async function landingData(): Promise<LandingData> {
-  try {
-    return await getLandingData();
-  } catch (e) {
-    console.error("[landing] data load failed", (e as Error).message);
-    return {
-      prices: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.price])) as Record<TierName, number | null>,
-      salesPaused: false,
-      publicVerdicts: [],
-    };
-  }
-}
+export const metadata: Metadata = pageMetadata({
+  title: "Real people judge your landing page, same day",
+  description:
+    "Real, identity-verified people who match your buyer judge your landing page against an AI challenger. Get the verdict and winning copy the same day.",
+  path: "/",
+  ogTitle: "Find out if strangers get your page before you pay to send them there.",
+});
 
 export default async function Home() {
-  // Prices are cached and prerendered into the static shell; sales-paused state and public verdicts stream in.
-  const prices = await getShellPrices();
-  const data = landingData();
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || null;
+  const { prices, offer } = await getPricingSnapshot();
+  const fixed = BUYABLE_TIERS.map((t) => prices[t] ?? TIERS[t].price).filter((n): n is number => n !== null);
+  const jhPrice = `${usd(Math.min(...fixed))}–${usd(Math.max(...fixed))}; Specialist from ${usd(SPECIALIST_FROM_USD)}`;
 
   return (
-    <>
-    <main>
-      <SiteHeader>
-        <nav className="small">
-          <a href="#pricing">Prices</a>
-        </nav>
-      </SiteHeader>
-      <LandingApp prices={prices} data={data} turnstileSiteKey={turnstileSiteKey} intro={<Intro />} />
-      <Suspense fallback={null}>
-        <PublicVerdicts data={data} />
-      </Suspense>
+    <main id="main">
+      <JsonLd
+        data={[
+          organizationLd(),
+          websiteLd(),
+          productOffersLd(prices, offer),
+          faqLd(HOME_FAQ.map(({ q, aText }) => ({ q, aText }))),
+        ]}
+      />
+      <Hero prices={prices} offer={offer} />
+      <TrustStrip />
+      <Problem />
+      <HowItWorks />
+      <WhatYouGet />
+      <PricingSection headingLevel={2} />
+      <ZeroEmployees />
+      <WhoFor />
+      <CompareSnippet jhPrice={jhPrice} />
+      <HomeFaq />
+      <FinalCta prices={prices} offer={offer} />
     </main>
-      <SiteFooter />
-    </>
-  );
-}
-
-function Intro() {
-  return (
-    <>
-      <h1>Before you spend $1,000 on ads, spend $11 to see if real people get your page.</h1>
-      <p className="hero-sub">Real buyers. Real verdict. Before you launch.</p>
-      <ol className="how">
-        <li>
-          <span>
-            <strong>Paste your page.</strong> A free AI preview shows the line most likely to lose a stranger, and a
-            rewrite.
-          </span>
-        </li>
-        <li>
-          <span>
-            <strong>We write a challenger and hire a jury.</strong> Real, identity-verified people who match your buyer,
-            recruited through Terac.
-          </span>
-        </li>
-        <li>
-          <span>
-            <strong>They judge yours against ours.</strong> Each juror sees both, in random order. You get the winner,
-            their own words, and copy ready to paste. Same day.
-          </span>
-        </li>
-      </ol>
-    </>
-  );
-}
-
-async function PublicVerdicts({ data }: { data: Promise<LandingData> }) {
-  const { publicVerdicts } = await data;
-  if (publicVerdicts.length === 0) return null; // no fake social proof: hide the block until it's real
-  return (
-    <section className="section" aria-labelledby="verdicts-h">
-      <div className="wrap">
-        <h2 id="verdicts-h">Recent verdicts, shared by their owners</h2>
-        <div className="verdict-cards">
-          {publicVerdicts.map((v) => (
-            <figure key={v.orderId}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- dynamic OG PNG, already sized */}
-              <img
-                src={`/api/og/verdict/${v.orderId}`}
-                alt={`Verdict: ${v.verdict}, judged by ${v.n} real people`}
-                width={1200}
-                height={630}
-                loading="lazy"
-              />
-              <figcaption>
-                {v.verdict}, from {v.n} real people
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </div>
-    </section>
   );
 }

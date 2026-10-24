@@ -1,9 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Analytics } from "@vercel/analytics/next";
+import { fontVariables } from "@/styles/fonts";
+import "@/styles/tokens.css";
 import "./globals.css";
+import "@/components/ui/ui.css";
+import { SiteAnalytics } from "@/components/ui/SiteAnalytics";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
+// Default metadata stays minimal: marketing pages set their own via pageMetadata() from @/lib/seo
+// (canonical, OG image, description). No canonical here, so pages without one don't inherit "/".
 export const metadata: Metadata = {
   ...(appUrl ? { metadataBase: new URL(appUrl) } : {}),
   title: {
@@ -16,20 +21,26 @@ export const metadata: Metadata = {
     title: "JuryHour: real buyers, real verdict, before you launch",
     description: "Before you spend $1,000 on ads, spend $11 to see if real people get your page.",
     type: "website",
+    siteName: "JuryHour",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FBFBFC",
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f5f9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c1422" },
+  ],
+  colorScheme: "light dark",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <body>
         {children}
-        <Analytics />
+        {/* @vercel/analytics <Analytics /> with private-link tokens stripped (beforeSend) */}
+        <SiteAnalytics />
       </body>
     </html>
   );

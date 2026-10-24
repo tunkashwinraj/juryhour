@@ -14,6 +14,7 @@ const VARS: Record<EmailTemplate, Record<string, string | number | null>> = {
   preview_followup_1: { preview_id: "p1", weak_spots: 2, weakest_line: XSS },
   preview_followup_2: { preview_id: `p1${IMG}` },
   quote_ready: { token: "tok_abc", price_usd: 499, purchase_url: "https://whop.com/checkout/plan_x?a=1&b=2", expires_at: "2026-10-26T12:00:00Z" },
+  order_lookup: { orders: JSON.stringify([{ token: "tok_abcdefghijklmnop", tier: "proof", stage: "DELIVERED", created_at: "2026-10-24T12:00:00Z" }]) },
   support_reply: { body: `Hi,\n\nThanks for writing. ${XSS}\nSecond line.`, subject: `Help ${XSS}`, token: "tok_abc" },
 };
 

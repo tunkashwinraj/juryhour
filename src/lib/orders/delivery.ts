@@ -1,5 +1,6 @@
 // Delivery after the provenance checker has passed: DELIVERED, or PARTIAL with a pro-rata refund when
 // fewer jurors were approved than requested (SPEC §8: price × (requested − approved) / requested).
+import { refreshTag } from "@/lib/cache-tags";
 import { sendEmail } from "@/lib/email";
 import { panelSpec, proRataRefund, round2 } from "@/lib/guardrails";
 import { getOrderStats } from "@/lib/stats";
@@ -53,6 +54,7 @@ export async function deliverReport(orderId: string, report: Report, actor: stri
   const requested = await requestedJurors(order);
   const approved = stats?.n_approved ?? 0;
   const deliveredAt = new Date().toISOString();
+  refreshTag("counters"); // home/about live counters include this verdict
 
   if (approved >= requested) {
     await transition(orderId, "DELIVERED", `Report passed the provenance checker (${approved}/${requested} jurors)`, { report, delivered_at: deliveredAt }, { from: "SYNTHESIZING", actor });

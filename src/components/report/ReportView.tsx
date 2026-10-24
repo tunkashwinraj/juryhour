@@ -17,11 +17,14 @@ export function ReportView({
   appUrl,
   nowMs,
   prices,
+  sample = false,
 }: {
   data: ReportData & { report: NonNullable<ReportData["report"]> };
   appUrl: string;
   nowMs: number;
   prices: { proof: number; pulse: number };
+  /** /sample-report: an illustrative report. Hides share, upgrade and next-step CTAs; the page owns the H1. */
+  sample?: boolean;
 }) {
   const r = data.report;
   const n = r.scorecard.n_approved;
@@ -31,46 +34,55 @@ export function ReportView({
 
   const sections = isSpark
     ? [
-        <Verdict key="v" data={data} hasB={false} />,
+        <Verdict key="v" data={data} hasB={false} sample={sample} />,
         <RawAnswers key="raw" jurors={data.jurors.slice(0, 3)} />,
         <Understanding key="u" rate={r.scorecard.understanding_rate_a} n={n} />,
         <Fixes key="f" fixes={r.top_fixes} title="Critique" />,
         r.rewritten_headline ? <RewrittenHeadline key="rh" text={r.rewritten_headline} /> : null,
-        <SparkUpgrade key="up" data={data} nowMs={nowMs} proofPrice={prices.proof} />,
+        sample ? null : <SparkUpgrade key="up" data={data} nowMs={nowMs} proofPrice={prices.proof} />,
         <Method key="m" caveats={r.method_caveats} n={n} hasB={false} />,
-        <Share key="s" data={data} xUrl={xUrl} />,
+        sample ? null : <Share key="s" data={data} xUrl={xUrl} />,
       ]
     : [
-        <Verdict key="v" data={data} hasB={hasB} />,
+        <Verdict key="v" data={data} hasB={hasB} sample={sample} />,
         <Scorecard key="sc" data={data} hasB={hasB} />,
         <Fixes key="f" fixes={r.top_fixes} title="Top fixes" />,
         r.winning_copy ? <WinningCopy key="wc" card={r.winning_copy} tested={hasB} winner={r.winner} /> : null,
         <StillUnsolved key="su" items={r.still_unsolved} />,
         <AllJurors key="all" jurors={data.jurors} hasB={hasB} />,
         <Method key="m" caveats={r.method_caveats} n={n} hasB={hasB} />,
-        <NextSteps key="cta" data={data} retestPrice={prices.pulse} />,
-        <Share key="s" data={data} xUrl={xUrl} />,
+        sample ? null : <NextSteps key="cta" data={data} retestPrice={prices.pulse} />,
+        sample ? null : <Share key="s" data={data} xUrl={xUrl} />,
       ];
 
   return <article className="report">{sections}</article>;
 }
 
-function Verdict({ data, hasB }: { data: ReportData & { report: NonNullable<ReportData["report"]> }; hasB: boolean }) {
+function Verdict({
+  data,
+  hasB,
+  sample,
+}: {
+  data: ReportData & { report: NonNullable<ReportData["report"]> };
+  hasB: boolean;
+  sample: boolean;
+}) {
   const r = data.report;
   const n = r.scorecard.n_approved;
   const marks = hasB ? tallyMarks(r.scorecard.prefer_a, r.scorecard.prefer_b, n) : [];
+  const Heading = sample ? "h2" : "h1";
   return (
     <section aria-labelledby="verdict-h">
       <div className="status-head">
-        <span className="badge">Your verdict</span>
-        <SandboxBadge mode={data.mode} />
+        <span className="badge">{sample ? "Example verdict" : "Your verdict"}</span>
+        {sample ? null : <SandboxBadge mode={data.mode} />}
       </div>
-      {data.mode === "sandbox" ? (
+      {!sample && data.mode === "sandbox" ? (
         <p className="small muted">This report comes from a test order in the sandbox.</p>
       ) : null}
-      <h1 id="verdict-h" className="verdict-line">
+      <Heading id="verdict-h" className="verdict-line">
         {r.headline_verdict}
-      </h1>
+      </Heading>
       {marks.length > 0 ? (
         <>
           <ul className="tally" aria-label={`${r.scorecard.prefer_b} preferred the challenger, ${r.scorecard.prefer_a} preferred your current page`}>

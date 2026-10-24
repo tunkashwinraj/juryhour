@@ -43,9 +43,12 @@ describe("proxy", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("x-middleware-next")).toBe("1");
   });
-  it("matches the dashboard, its write routes, and ?src= page loads", () => {
+  it("matches the dashboard, its write routes, and page loads (never API routes or the juror page)", () => {
     expect(config.matcher.slice(0, 3)).toEqual(["/ops", "/ops/:path*", "/api/ops-ui/:path*"]);
-    expect(config.matcher[3]).toMatchObject({ has: [{ type: "query", key: "src" }] });
+    const pages = new RegExp(`^${String(config.matcher[3])}$`);
+    expect(pages.test("/pricing")).toBe(true);
+    expect(pages.test("/api/whop-webhook")).toBe(false);
+    expect(pages.test("/t/abc")).toBe(false);
   });
   it("sets the jh_src cookie on public pages with ?src= and never asks for auth there", () => {
     const res = proxy(new NextRequest("https://juryhour.test/?src=Reddit"));

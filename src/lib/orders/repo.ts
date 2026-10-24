@@ -1,5 +1,6 @@
 // Small DB helpers shared by handlers, the Ops API and the reconciler. Every write that books money
 // goes through addLedger (idempotent on (kind, ref)); every decision is logged via logEventSafe.
+import { refreshTag } from "@/lib/cache-tags";
 import { db, logEvent, must } from "@/lib/db";
 import { Refusal } from "@/lib/guardrails";
 import type { Mode } from "@/lib/types";
@@ -108,6 +109,7 @@ export async function getCompanyState(): Promise<CompanyStateRow> {
 
 export async function updateCompanyState(patch: Partial<CompanyStateRow>): Promise<void> {
   must(await db().from("company_state").update({ ...patch, updated_at: nowIso() }).eq("id", 1), "company_state update");
+  if ("sales_paused" in patch) refreshTag("company_state");
 }
 
 export async function getAgentRuns(orderId: string, agent?: string): Promise<AgentRunRow[]> {

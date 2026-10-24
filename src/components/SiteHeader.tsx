@@ -1,43 +1,22 @@
-import Link from "next/link";
+// Chrome for the app pages outside the marketing group (/o, /r, /ops). The marketing header and
+// footer are SiteHeader/SiteFooter from "@/components/ui" (rendered by src/app/(site)/layout.tsx).
+import { AppFooter, AppHeader, Badge } from "@/components/ui";
 
+/** Compact header: wordmark + optional slot (e.g. "Company dashboard" on /ops). */
 export function SiteHeader({ children }: { children?: React.ReactNode }) {
-  return (
-    <header className="site-header">
-      <div className="wrap">
-        <Link href="/" className="wordmark" aria-label="JuryHour home">
-          JuryHour
-        </Link>
-        {children}
-      </div>
-    </header>
-  );
+  return <AppHeader>{children}</AppHeader>;
 }
 
-/** Footer for every JuryHour page (the juror page /t/* stays unbranded, so it's not in the root layout). */
+/** Compact footer for every JuryHour app page (the juror page /t/* stays unbranded and has none). */
 export function SiteFooter() {
-  return (
-    <footer className="site-footer">
-      <div className="wrap">
-        <nav className="small" aria-label="Footer">
-          <a href="/#pricing">Pricing</a> · <a href="/">Free preview</a>
-        </nav>
-        <p className="small">
-          © 2026 JuryHour · Research, not a sales guarantee · Jurors recruited through{" "}
-          <a href="https://terac.com" rel="noopener">
-            Terac
-          </a>{" "}
-          · Payments by Whop
-        </p>
-      </div>
-    </footer>
-  );
+  return <AppFooter />;
 }
 
 export function SandboxBadge({ mode }: { mode: "live" | "sandbox" }) {
   if (mode !== "sandbox") return null;
   return (
-    <span className="badge badge-sandbox" title="No real money moved and no real verdict is implied">
+    <Badge tone="sandbox" title="No real money moved and no real verdict is implied">
       TEST MODE (sandbox)
-    </span>
+    </Badge>
   );
 }

@@ -29,7 +29,7 @@ type Props = {
 
 export default function JurorPage({ params, searchParams }: Props) {
   return (
-    <div className={styles.root}>
+    <div className={styles.root} data-neutral>
       <main className={styles.main}>
         <Suspense fallback={<p className={styles.muted} role="status">Loading…</p>}>
           <JurorLoader params={params} searchParams={searchParams} />

@@ -1,0 +1,46 @@
+export const frontmatter = {
+  title: "How I built a company with zero employees in one day",
+  description:
+    "An outline of how JuryHour was built in one day: agents that run the company, code that enforces the limits, and real people only as paid jurors.",
+  date: "2026-10-24",
+  author: "Ashwin Raj Tunk",
+  draft: true,
+}
+
+This post is a draft outline. It will be filled in with real numbers from the first live orders once they exist. Until then, nothing below is a result. It is the plan and the structure as built.
+
+## What JuryHour does
+
+You paste a landing page URL (or your pitch). An AI agent reads it, researches the market, and writes a challenger version. Real people who match your buyer, recruited and identity-verified through Terac, see both versions in random order and say which one they'd act on and why. You get a written verdict with their quotes as evidence. It is directional signal from real people, not a sales guarantee.
+
+## Why zero employees
+
+- The idea: every step from payment to panel to verdict is done by software and agents. Humans appear only as paid jurors.
+- The /ops dashboard counts human interventions. The goal is for that number to stay at zero, and to be honest when it isn't.
+
+## The rule that made it safe: agents decide, code enforces
+
+- Agents choose *what* to do: the rewrite, which juror answers are low quality, whether a refund policy applies, a price within a band.
+- Code enforces the *limits*: money, margin floor, panel size, rate limits, state transitions, one support refund per order.
+- No agent can move money directly. Refunds go through a checked API that refuses anything outside the written policy.
+
+## The agents
+
+- Researcher: reads the page, researches competitors, writes the challenger card.
+- Procurement: shrinks or broadens the panel when recruiting is too expensive, or refunds.
+- Analyst: writes the report. A checker rejects it unless every quote is verbatim from a stored answer and every number matches the database.
+- Support, Disputes, CEO, CFO and Growth handle the rest of the company.
+
+## The stack
+
+- Whop for payments, refunds and disputes. Terac for recruiting jurors. Exa for reading pages and research.
+- Claude agents for research, report writing and operations; OpenAI models for the free preview, the safety screen and grading answers.
+- Next.js on Vercel, Supabase for the database, Resend for email, Cloudflare Turnstile for bot checks.
+
+## What went wrong
+
+To be written from the build log. Draft notes only for now.
+
+## Results
+
+Not yet. This section will report real orders, real refunds and real margins from the live dashboard, or say plainly that there aren't any yet.

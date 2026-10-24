@@ -1,0 +1,79 @@
+# JuryHour: full description for language models
+
+> JuryHour tests a landing page or pitch with real people who match your buyer. An AI agent writes a challenger version; real, identity-verified people recruited through Terac judge yours against it in random order; you get a written verdict with anonymous quotes and the winning copy, usually the same day. From $11. Directional research from a small panel of real people, not a sales guarantee.
+
+Last updated: Oct 24, 2026. Prices and packages can change; the checkout always shows the current price. Links are relative to this site's origin. Short version: [/llms.txt](/llms.txt).
+
+## What JuryHour is
+
+JuryHour is for founders, online sellers and agencies who want to know, before spending on ads or a launch, whether the people they are selling to understand and want what their page offers. Typical users: Whop sellers (courses, communities, software) whose sales page is their business; indie and AI-built SaaS founders (Lovable, Bolt, Replit, Cursor, v0); agencies that want real-buyer evidence for client pages.
+
+JuryHour describes itself as "a company with zero employees". AI agents run research, copywriting, recruiting, grading, report writing, support and refunds. Code enforces every money limit: agents can never move money directly, refunds go through a checked policy, and panel size and margins are capped in code. Humans take part only as paid jurors. JuryHour was built at the Zero-Human Company Hackathon by Terac at Whop HQ on Oct 24, 2026, and was founded by Ashwin Raj Tunk (Founder & CEO).
+
+## How it works
+
+1. Paste your page. You enter a public URL (or paste your pitch) and describe your buyer. A free AI preview, with no card and no login, shows what your page communicates, its weakest line and a suggested rewrite.
+2. We hire your jury. After you pay, an agent reads your page, researches your market and competitors, and writes a challenger version (Card B) next to a faithful summary of your page (Card A). Real people who match your buyer are recruited, screened and identity-verified through Terac.
+3. Jurors judge. On Proof-format tests each juror sees both versions for 5 seconds, in random order, without knowing which is yours, then answers a fixed set of questions in their own words.
+4. Quality checks. Answers are checked for time on task, an attention check, minimum length, and graded by AI. Clearly low-quality work is rejected with a written reason and isn't paid for.
+5. You get the verdict. Which version won and by how much, a scorecard, the top fixes with juror quotes as evidence, issues neither version solved, and the winning copy ready to paste. Every quote is verbatim from a stored juror answer and every number is computed from the database; a checker blocks delivery otherwise.
+
+Limits: panels are small (3 to 20 people), audience matching is approximate, and stated reactions can differ from real buying behavior. Treat results as directional signal. Only public pages are tested; do not submit confidential material. JuryHour delivers copy and findings; it does not edit your site.
+
+## Packages and prices (USD, as of Oct 24, 2026)
+
+| Package | Price | Jurors (minimum to deliver) | What you get | Delivery window |
+|---|---|---|---|---|
+| Spark | $11 | 3 (3) | 2-minute first impression of your headline, AI critique, 1 rewritten headline (untested) | 4 hours |
+| Pulse | $49 | 10 (8) | 4-minute reaction to your current page, full report with anonymous quotes, rewritten hero section (untested) | 4 hours |
+| Proof | $149 | 15 (10) | 8-minute test: your page vs our AI rewrite in random order; verdict, scorecard, top fixes, winning copy | 8 hours |
+| Launch Pack | $199 | 15 (10) | Proof now plus one free retest after you update your page | 8 hours, plus the retest |
+| Specialist Jury | from $499, quoted | 8 (6) | Verified professionals matching your buyer (job, industry, seniority); buyer objections and price reaction | 24–72 hours |
+
+- Launch offer: Proof for $99 (normally $149) until 6:00pm ET on Oct 24, 2026 (22:00 UTC). The price is applied automatically at checkout until then; the offer is not extended.
+- Add-ons: +5 jurors for $15; Rush for $9, which halves the delivery window.
+- Upgrade credit: a Spark purchase counts toward a higher package if you upgrade within 24 hours.
+- Promo codes (for example LOVABLE or WHOP) record where you came from. They do not give discounts.
+- Payments, refunds and disputes are processed by Whop.
+
+## Refund policy (enforced in code)
+
+- Full refund, automatically, if we can't recruit your audience within your package's budget (after shrinking the panel to its minimum or broadening the audience once).
+- Full refund, automatically, if fewer than the minimum number of jurors (table above) have given usable answers when the deadline passes, after a 1-hour grace period.
+- Pro-rata refund, automatically, if the minimum is met but the panel is short: price paid × (jurors requested − jurors delivered) ÷ jurors requested. Example: a $149 Proof with 15 jurors requested that delivers 12 refunds $29.80. "Jurors requested" is the size of the panel actually launched.
+- Full refund, automatically, if a step of the order fails 3 times.
+- Refund on request, once per order, if the verdict is more than 2× its delivery window late or the report failed.
+- No refund because a verdict wasn't the one you hoped for. Refused content is never charged.
+- Details: [/legal/refunds](/legal/refunds).
+
+## What JuryHour won't test
+
+Gambling, sports picks or trading signals; adult content; guaranteed-income or get-rich-quick schemes; scams or phishing; hate content; weapons; illegal goods; multi-level marketing (MLM). These are refused at the free preview, before any payment.
+
+## Privacy and jurors
+
+- Jurors are anonymous to customers ("Juror 06"). Terac holds jurors' identities; JuryHour never shares names, emails, photos or profiles with customers.
+- Customer data: email, the submitted URL or pitch and page text, buyer description, order details, a hashed IP for rate limits. Card details are handled by Whop.
+- Service providers: Whop (payments), Terac (juror recruiting and identity), Exa (page reading and research), OpenAI (preview, safety screen, answer grading), Anthropic (Claude agents for research, report writing and operations), Supabase (database), Vercel (hosting, cookieless analytics), Resend (email), Cloudflare (bot check).
+- JuryHour does not sell personal data. Not for under-18s. Deletion requests go to the support email on the [contact page](/contact).
+- Details: [/legal/privacy](/legal/privacy).
+
+## Pages
+
+- [Home and free AI preview](/)
+- [How it works](/how-it-works)
+- [Pricing](/pricing)
+- [Sample report](/sample-report) (illustrative example, labeled as such)
+- [For Whop sellers](/for/whop-sellers)
+- [For Lovable, Bolt and Replit builders](/for/lovable-builders)
+- [For agencies](/for/agencies) (white-label option, 30% affiliate commission via Whop)
+- [Compare](/compare), [JuryHour vs Wynter](/compare/wynter), [JuryHour vs PickFu](/compare/pickfu)
+- [Public verdicts](/verdicts) (only reports whose owners opted in)
+- [FAQ](/faq)
+- [About](/about)
+- [For AI agents and developers](/agents)
+- [Affiliates](/affiliates)
+- [Contact](/contact)
+- [Changelog](/changelog)
+- [Blog](/blog)
+- [Terms of service](/legal/terms), [Privacy policy](/legal/privacy), [Refund policy](/legal/refunds), [Accessibility statement](/legal/accessibility)

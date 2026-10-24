@@ -34,6 +34,7 @@ export const EMAIL_TEMPLATES = [
   "preview_followup_2",
   "quote_ready",
   "support_reply",
+  "order_lookup",
 ] as const;
 export type EmailTemplate = (typeof EMAIL_TEMPLATES)[number];
 
@@ -268,6 +269,94 @@ const supportReply: Render = (vars, ctx) => {
   );
 };
 
+// ---------- order_lookup (Agent C: /api/order-lookup) ----------
+
+const LOOKUP_STAGE_LABEL: Record<string, string> = {
+  CREATED: "Waiting for payment",
+  PAID: "Paid, jury being assembled",
+  RESEARCHING: "In progress",
+  QUOTING: "In progress",
+  PANEL_LIVE: "Jury at work",
+  GRADING: "In progress",
+  SYNTHESIZING: "Writing your report",
+  DELIVERED: "Verdict delivered",
+  PARTIAL: "Verdict delivered (partial jury)",
+  REFUNDED: "Refunded",
+  FAILED: "Needs attention",
+  BLOCKED: "Needs attention",
+};
+
+type LookupOrder = { token: string; tier: string; stage: string; created_at: string | null };
+
+function parseLookupOrders(raw: string): LookupOrder[] {
+  let v: unknown;
+  try {
+    v = JSON.parse(raw);
+  } catch {
+    throw new EmailVarError("order_lookup", "orders");
+  }
+  if (!Array.isArray(v)) throw new EmailVarError("order_lookup", "orders");
+  const out: LookupOrder[] = [];
+  for (const o of v.slice(0, 20)) {
+    const r = (o ?? {}) as Record<string, unknown>;
+    if (typeof r.token !== "string" || !/^[A-Za-z0-9_-]{16,128}$/.test(r.token)) continue;
+    out.push({
+      token: r.token,
+      tier: typeof r.tier === "string" ? r.tier : "",
+      stage: typeof r.stage === "string" ? r.stage : "",
+      created_at: typeof r.created_at === "string" ? r.created_at : null,
+    });
+  }
+  if (out.length === 0) throw new EmailVarError("order_lookup", "orders");
+  return out;
+}
+
+/**
+ * Transactional (requested by the recipient on /contact). vars: orders (required, JSON array of
+ * {token, tier, stage, created_at}). Links each order's status page, and its report once delivered.
+ */
+const orderLookup: Render = (vars, ctx) => {
+  const orders = parseLookupOrders(requireStr("order_lookup", vars, "orders"));
+  const rows = orders.map((o) => {
+    const name = tierDisplayName(o.tier);
+    const date = o.created_at && !Number.isNaN(Date.parse(o.created_at)) ? new Date(o.created_at).toUTCString().slice(5, 16) : null;
+    const status = o.tier === "specialist" && o.stage === "CREATED" ? "Quote requested" : LOOKUP_STAGE_LABEL[o.stage] ?? "In progress";
+    const delivered = o.stage === "DELIVERED" || o.stage === "PARTIAL";
+    return {
+      label: oneLine(`${name}${date ? ` · ${date}` : ""} · ${status}`, 160),
+      status: statusUrl(ctx, o.token),
+      report: delivered ? reportUrl(ctx, o.token) : null,
+    };
+  });
+  const intro = `You asked for links to your JuryHour ${plural(rows.length, "order", "orders")}. Here ${plural(rows.length, "it is", "they are")}:`;
+  const html =
+    p(escapeHtml(intro)) +
+    rows
+      .map((r) => p(`${escapeHtml(r.label)}<br>${link(r.status, "Order status")}${r.report ? ` · ${link(r.report, "Read the report")}` : ""}`))
+      .join("") +
+    p("These links are private to you. Anyone with a link can see that order, so please don't share them.") +
+    p("If you didn't ask for this email, you can ignore it.");
+  const text = [
+    intro,
+    "",
+    ...rows.flatMap((r) => [r.label, `Order status: ${r.status}`, ...(r.report ? [`Report: ${r.report}`] : []), ""]),
+    "These links are private to you. Anyone with a link can see that order, so please don't share them.",
+    "If you didn't ask for this email, you can ignore it.",
+  ];
+  return build(ctx, false, "Your JuryHour order links", intro, html, text);
+};
+
+function tierDisplayName(tier: string): string {
+  const names: Record<string, string> = {
+    spark: "Spark",
+    pulse: "Pulse",
+    proof: "Proof",
+    launch_pack: "Launch Pack",
+    specialist: "Specialist Jury",
+  };
+  return names[tier] ?? "Order";
+}
+
 export const TEMPLATES: Record<EmailTemplate, Render> = {
   paid,
   delivered,
@@ -277,6 +366,7 @@ export const TEMPLATES: Record<EmailTemplate, Render> = {
   preview_followup_2: previewFollowup2,
   quote_ready: quoteReady,
   support_reply: supportReply,
+  order_lookup: orderLookup,
 };
 
 export function renderEmail(template: EmailTemplate, vars: EmailVars, ctx: EmailContext): RenderedEmail {

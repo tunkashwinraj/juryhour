@@ -1,0 +1,323 @@
+/* Long-form layout shared by /legal/* and /blog/*. Uses design tokens from src/styles/tokens.css
+   (Agent A) with fallbacks to the pre-redesign variables so the pages render either way. */
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 72px) 16px clamp(48px, 8vw, 96px);
+  color: var(--ink);
+}
+
+.crumbs {
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--muted, var(--ink-2, #4a5263));
+  margin: 0 0 24px;
+}
+
+.crumbs ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.crumbs li + li::before {
+  content: "/";
+  margin-right: 6px;
+  color: var(--rule, #d9dce3);
+}
+
+.crumbs a {
+  color: inherit;
+}
+
+.header {
+  max-width: 65ch;
+  margin-bottom: 32px;
+}
+
+.eyebrow {
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted, var(--ink-2, #4a5263));
+  margin: 0 0 12px;
+}
+
+.title {
+  font-family: var(--font-display, var(--serif, Georgia, serif));
+  font-weight: 500;
+  font-size: clamp(36px, 6vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin: 0 0 16px;
+}
+
+.lede {
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--muted, var(--ink-2, #4a5263));
+  margin: 0 0 16px;
+}
+
+.meta {
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 13px;
+  color: var(--muted, var(--ink-2, #4a5263));
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.notice {
+  border-left: 3px solid var(--rule, #d9dce3);
+  padding: 12px 16px;
+  margin: 24px 0 0;
+  background: var(--wash, transparent);
+  font-size: 15px;
+  line-height: 1.5;
+  max-width: 65ch;
+}
+
+.notice p {
+  margin: 0;
+}
+
+.notice p + p {
+  margin-top: 6px;
+}
+
+.draft {
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 13px;
+  color: var(--verdict, var(--bad-ink, #9b1c1c));
+}
+
+.layout {
+  display: grid;
+  gap: 32px;
+}
+
+@media (min-width: 960px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 64px;
+    align-items: start;
+  }
+  .toc {
+    position: sticky;
+    top: 96px;
+    order: 2;
+  }
+}
+
+.toc {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.tocTitle {
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted, var(--ink-2, #4a5263));
+  margin: 0 0 8px;
+}
+
+.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 12px;
+  border-left: 1px solid var(--rule, #d9dce3);
+}
+
+.toc li {
+  margin: 0 0 8px;
+}
+
+.toc li.sub {
+  padding-left: 12px;
+}
+
+.toc a {
+  color: var(--muted, var(--ink-2, #4a5263));
+  text-decoration: none;
+}
+
+.toc a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.prose {
+  max-width: 65ch;
+  font-size: 17px;
+  line-height: 1.65;
+  min-width: 0;
+}
+
+.prose h2 {
+  font-family: var(--font-display, var(--serif, Georgia, serif));
+  font-weight: 500;
+  font-size: 28px;
+  line-height: 1.2;
+  text-wrap: balance;
+  margin: 48px 0 12px;
+  scroll-margin-top: 96px;
+}
+
+.prose > :first-child,
+.prose section:first-child h2 {
+  margin-top: 0;
+}
+
+.prose h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 28px 0 8px;
+  scroll-margin-top: 96px;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose table {
+  margin: 0 0 16px;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 22px;
+}
+
+.prose li {
+  margin: 0 0 6px;
+}
+
+.prose a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose a:focus-visible,
+.toc a:focus-visible,
+.crumbs a:focus-visible {
+  outline: 2px solid var(--focus, var(--accent, #2346d8));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.prose code {
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 0.92em;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.prose th,
+.prose td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--rule, #d9dce3);
+}
+
+.prose th {
+  font-weight: 600;
+}
+
+.caption {
+  caption-side: top;
+  text-align: left;
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted, var(--ink-2, #4a5263));
+  padding-bottom: 8px;
+}
+
+.prose strong {
+  font-weight: 600;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin: 0 0 16px;
+}
+
+.mono {
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-variant-numeric: tabular-nums;
+}
+
+.cardList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0;
+  max-width: 65ch;
+  border-top: 1px solid var(--rule, #d9dce3);
+}
+
+.cardList li {
+  border-bottom: 1px solid var(--rule, #d9dce3);
+  padding: 20px 0;
+}
+
+.cardTitle {
+  font-family: var(--font-display, var(--serif, Georgia, serif));
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 0 0 6px;
+  text-wrap: balance;
+}
+
+.cardTitle a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.cardTitle a:hover {
+  text-decoration: underline;
+}
+
+.cardTitle a:focus-visible {
+  outline: 2px solid var(--focus, var(--accent, #2346d8));
+  outline-offset: 2px;
+}
+
+.cardText {
+  margin: 0 0 8px;
+  color: var(--muted, var(--ink-2, #4a5263));
+  line-height: 1.5;
+}
+
+.badge {
+  display: inline-block;
+  font-family: var(--font-mono, var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace));
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  color: var(--verdict, var(--bad-ink, #9b1c1c));
+  vertical-align: middle;
+}

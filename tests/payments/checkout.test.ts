@@ -157,6 +157,7 @@ describe("POST /api/checkout — business rules", () => {
       preview_id: PREVIEW_ID,
       parent_order_id: null,
       retest_available: false,
+      promo_code: null,
       deadline_at: null,
     });
 

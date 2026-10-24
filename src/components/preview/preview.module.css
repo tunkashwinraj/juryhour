@@ -1,0 +1,199 @@
+/* Preview + checkout UX (Agent C). Tokens from src/styles/tokens.css; fallbacks keep it legible alone. */
+
+.root {
+  scroll-margin-top: calc(var(--header-h, 64px) + var(--space-4, 16px));
+  display: grid;
+  gap: var(--space-4, 16px);
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-display, serif);
+  font-size: var(--text-28, 28px);
+  line-height: var(--leading-tight, 1.15);
+  margin: 0 0 var(--space-2, 8px);
+  text-wrap: balance;
+}
+.title:focus { outline: none; }
+.title:focus-visible { outline: 2px solid var(--focus, currentColor); outline-offset: 4px; }
+
+.small {
+  font-size: var(--text-14, 14px);
+  color: var(--muted, #556);
+  margin: var(--space-2, 8px) 0;
+}
+
+.num { font-family: var(--font-mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+
+.error {
+  color: var(--verdict, #b42318);
+  font-size: var(--text-14, 14px);
+  font-weight: 600;
+  margin: var(--space-2, 8px) 0 0;
+}
+.ok { color: var(--ink, #111); font-size: var(--text-14, 14px); margin: var(--space-2, 8px) 0 0; }
+.statusLine:empty { display: none; }
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.linkButton {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--ink, inherit);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.linkButton:focus-visible { outline: 2px solid var(--focus, currentColor); outline-offset: 2px; border-radius: 2px; }
+
+/* quick input */
+.quick { display: grid; gap: var(--space-2, 8px); }
+.quickLabel { font-weight: 600; font-size: var(--text-16, 16px); }
+.quickRow { display: flex; gap: var(--space-2, 8px); flex-wrap: wrap; }
+.quickRow > input { flex: 1 1 14rem; min-width: 0; }
+.quickRow > button { flex: 0 0 auto; }
+@media (max-width: 480px) {
+  .quickRow > button { flex: 1 1 100%; }
+}
+
+/* full form */
+.form { display: grid; gap: var(--space-3, 12px); }
+.panel { margin-top: var(--space-2, 8px); }
+
+/* loading */
+.loading { display: grid; gap: var(--space-3, 12px); padding: var(--space-4, 16px) 0; }
+.loadingNow { font-size: var(--text-22, 22px); font-family: var(--font-display, serif); margin: 0; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2, 8px); }
+.steps li {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-14, 14px);
+  letter-spacing: var(--tracking-mono, 0.02em);
+  color: var(--muted, #556);
+  padding-left: 1.5em;
+  position: relative;
+}
+.steps li::before { content: "○"; position: absolute; left: 0; }
+.steps li[data-state="active"] { color: var(--ink, #111); }
+.steps li[data-state="active"]::before { content: "●"; }
+.steps li[data-state="done"]::before { content: "✓"; color: var(--signal, green); }
+@media (prefers-reduced-motion: no-preference) {
+  .steps li[data-state="active"]::before { animation: pulse 1.2s ease-in-out infinite; }
+}
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+/* result */
+.result { display: grid; gap: var(--space-4, 16px); }
+.resultRow { min-width: 0; }
+.resultRow p { margin: 0; overflow-wrap: anywhere; }
+.resultLabel {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-12, 12px);
+  letter-spacing: var(--tracking-mono, 0.06em);
+  text-transform: uppercase;
+  color: var(--muted, #556);
+  margin: 0 0 var(--space-1, 4px);
+  font-weight: 500;
+}
+.quote {
+  margin: 0;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-left: 3px solid var(--rule-strong, #999);
+  font-size: var(--text-18, 18px);
+  overflow-wrap: anywhere;
+}
+.rewrite {
+  padding: var(--space-3, 12px);
+  background: var(--signal-wash, rgba(0, 128, 0, 0.06));
+  border-radius: var(--radius-md, 8px);
+}
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4, 16px);
+  margin: var(--space-3, 12px) 0;
+  font-size: var(--text-14, 14px);
+}
+
+.refusal { display: grid; gap: var(--space-2, 8px); margin-bottom: var(--space-4, 16px); }
+.refusalTitle { font-size: var(--text-22, 22px); margin: 0; }
+
+/* upsell */
+.upsell {
+  display: grid;
+  gap: var(--space-3, 12px);
+  margin-top: var(--space-5, 24px);
+  padding-top: var(--space-5, 24px);
+  border-top: 1px solid var(--rule, #ddd);
+}
+.upsellTitle {
+  font-family: var(--font-display, serif);
+  font-size: var(--text-22, 22px);
+  margin: 0;
+  text-wrap: balance;
+}
+.tierList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3, 12px);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+.tierList > li { min-width: 0; display: grid; }
+.tierHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2, 8px); }
+.tierName { font-weight: 600; font-size: var(--text-18, 18px); }
+.tierPrice {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-22, 22px);
+  margin: var(--space-2, 8px) 0 0;
+}
+.compareAt { font-size: var(--text-14, 14px); color: var(--muted, #556); }
+.withAddons { font-size: var(--text-12, 12px); color: var(--muted, #556); }
+
+.addons {
+  border: 1px solid var(--rule, #ddd);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-3, 12px);
+  margin: 0;
+  display: grid;
+  gap: var(--space-2, 8px);
+}
+.addons legend { font-weight: 600; padding: 0 var(--space-1, 4px); }
+.check { display: flex; gap: var(--space-2, 8px); align-items: center; cursor: pointer; }
+.check input { width: 1.1rem; height: 1.1rem; accent-color: var(--ink, #111); }
+
+.codeRow { font-size: var(--text-14, 14px); }
+.codeField { display: grid; gap: var(--space-1, 4px); max-width: 20rem; }
+.codeField label { font-weight: 600; }
+
+.cta { display: grid; gap: var(--space-1, 4px); margin-top: var(--space-3, 12px); }
+.secureNote {
+  margin: 0;
+  font-size: var(--text-12, 12px);
+  color: var(--muted, #556);
+  text-align: center;
+}
+
+.inlineForm { display: grid; gap: var(--space-3, 12px); margin-top: var(--space-3, 12px); }
+
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+/* /preview/[id] */
+.pageMeta { font-size: var(--text-14, 14px); color: var(--muted, #556); overflow-wrap: anywhere; }
+.confirm { display: grid; gap: var(--space-2, 8px); max-width: 28rem; margin-top: var(--space-4, 16px); }

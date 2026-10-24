@@ -1,4 +1,5 @@
-// HTTP basic auth for the company dashboard and its write routes (CONTRACTS §4).
+// HTTP basic auth for the company dashboard and its write routes (CONTRACTS §4), ?src= capture, and
+// the vercel.app → canonical domain redirect (docs/WEBSITE_SPEC.md §9).
 import { NextResponse, type NextRequest } from "next/server";
 import { srcCookie, srcFromUrl } from "@/lib/analytics";
 
@@ -37,10 +38,28 @@ export function isOpsPath(pathname: string): boolean {
   return pathname === "/ops" || pathname.startsWith("/ops/") || pathname.startsWith("/api/ops-ui/");
 }
 
+/** Production aliases that should 308 to the canonical domain. Preview deployments keep working. */
+const PRODUCTION_ALIASES = new Set(["juryhour.vercel.app", "juryhour-ashwin-raj-tunks-projects.vercel.app"]);
+
+/**
+ * Where a request should be redirected for the canonical domain, or null. Only when CANONICAL_HOST is
+ * set (the lead sets it once DNS resolves), only from production aliases, and never for /api (Whop,
+ * Terac and pg_cron POST to the vercel.app URL) or /t (juror links handed to Terac).
+ */
+export function canonicalRedirect(url: URL, host: string | null, canonical = process.env.CANONICAL_HOST): string | null {
+  if (!canonical || !host) return null;
+  const h = host.toLowerCase().split(":")[0];
+  if (!PRODUCTION_ALIASES.has(h) || h === canonical) return null;
+  const p = url.pathname;
+  if (p.startsWith("/api/") || p === "/api" || p.startsWith("/t/") || p.startsWith("/_next/")) return null;
+  return `https://${canonical}${p}${url.search}`;
+}
+
 export function proxy(request: NextRequest) {
+  const target = canonicalRedirect(request.nextUrl, request.headers.get("host"));
+  if (target) return NextResponse.redirect(target, 308);
   if (!isOpsPath(request.nextUrl.pathname)) {
-    // Public page opened with ?src=: remember the channel (SPEC §9). Only reached via the
-    // `has: query src` matcher below, so ordinary page loads never run the proxy.
+    // Public page opened with ?src=: remember the channel (SPEC §9).
     const res = NextResponse.next();
     const src = srcFromUrl(request.url);
     if (src) res.cookies.set(srcCookie(src, request.nextUrl.protocol === "https:"));
@@ -62,7 +81,7 @@ export const config = {
     "/ops",
     "/ops/:path*",
     "/api/ops-ui/:path*",
-    // pages carrying ?src= (not API routes, static assets or the juror page)
-    { source: "/((?!api/|_next/|t/|favicon.ico).*)", has: [{ type: "query", key: "src" }] },
+    // pages (not API routes, static assets or the juror page): ?src= capture + canonical redirect
+    "/((?!api/|_next/|t/|favicon.ico|robots.txt|sitemap.xml|llms).*)",
   ],
 };

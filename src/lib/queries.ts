@@ -1,6 +1,7 @@
 // All DB reads for Workstream A pages and routes. Server-only (service role via db()).
 // Callers inside React Server Components must be behind <Suspense> (Cache Components).
 import { cacheLife, cacheTag } from "next/cache";
+import { refreshTag } from "@/lib/cache-tags";
 import { db, must } from "@/lib/db";
 import { BUYABLE_TIERS, TIERS, type TierName } from "@/lib/constants";
 import { Report, type Card, type Answers, type Mode, type Stage } from "@/lib/types";
@@ -47,6 +48,24 @@ export async function getShellPrices(): Promise<Record<TierName, number | null>>
   } catch {
     return mergePrices(null);
   }
+}
+
+/** Opt-in public verdicts (live orders whose owner ticked "show publicly"), newest first. */
+export async function getPublicVerdicts(limit = 60): Promise<LandingData["publicVerdicts"]> {
+  const res = await db()
+    .from("orders")
+    .select("id, report, delivered_at")
+    .eq("report_public", true)
+    .not("report", "is", null)
+    .eq("mode", "live")
+    .order("delivered_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+  const out: LandingData["publicVerdicts"] = [];
+  for (const row of res.error ? [] : res.data ?? []) {
+    const parsed = Report.safeParse(row.report);
+    if (parsed.success) out.push({ orderId: row.id, verdict: parsed.data.headline_verdict, n: parsed.data.scorecard.n_approved });
+  }
+  return out;
 }
 
 export async function getLandingData(): Promise<LandingData> {
@@ -407,6 +426,7 @@ export async function setSalesPaused(paused: boolean): Promise<{ salesPaused: bo
       .eq("id", 1),
     "company_state update",
   );
+  refreshTag("company_state");
   return { salesPaused: paused, humanInterventions: next };
 }
 
