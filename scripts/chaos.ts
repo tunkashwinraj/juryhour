@@ -257,7 +257,8 @@ const scenarios: Record<number, { name: string; run: () => Promise<Outcome> }> =
         await q(db().from("company_state").update({ terac_balance_usd: 100, terac_balance_checked_at: new Date().toISOString() }).eq("id", 1).select("id"));
         await reconcile();
         const resumed = await q<Row>(db().from("company_state").select("sales_paused").eq("id", 1).single());
-        const ok = paused.sales_paused === true && checkout.status >= 400 && checkout.status < 500 && resumed.sales_paused === false;
+        // /api/checkout refuses a paused company with 503 {code:"sales_paused"} (CONTRACTS / INTEGRATION_NOTES [B])
+        const ok = paused.sales_paused === true && checkout.status === 503 && checkout.json.code === "sales_paused" && resumed.sales_paused === false;
         return { status: ok ? "PASS" : "FAIL", detail: `paused=${paused.sales_paused} checkout=${checkout.status} resumed=${!resumed.sales_paused}` };
       } finally {
         await q(db().from("company_state").update({

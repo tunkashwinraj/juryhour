@@ -134,7 +134,9 @@ test("proof: random first card, 5s reveals, both cards, preference, shuffled att
   expect(body.answers.cards.A).toMatchObject({ what_it_does: SIXTEEN, clarity: 6, would_try: 5 });
   expect(body.answers.cards.B).toMatchObject({ what_it_does: SIXTEEN, clarity: 6, would_try: 5 });
   expect(body.answers.attention_choice).toBe("Syncs with your bank feed");
-  expect(JSON.stringify(body)).not.toMatch(/email|name/i);
+  // no identity fields are collected (answer text may mention "email" — only keys matter)
+  const keys = JSON.stringify(body, (k, v) => v).match(/"[^"]+":/g) ?? [];
+  expect(keys.join(" ")).not.toMatch(/email|name/i);
 });
 
 test("randomization: Math.random ≥ 0.5 shows card A first", async ({ page }) => {
