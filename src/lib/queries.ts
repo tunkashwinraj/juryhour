@@ -1,5 +1,6 @@
 // All DB reads for Workstream A pages and routes. Server-only (service role via db()).
 // Callers inside React Server Components must be behind <Suspense> (Cache Components).
+import { cacheLife, cacheTag } from "next/cache";
 import { db, must } from "@/lib/db";
 import { BUYABLE_TIERS, TIERS, type TierName } from "@/lib/constants";
 import { Report, type Card, type Answers, type Mode, type Stage } from "@/lib/types";
@@ -31,6 +32,21 @@ function mergePrices(rows: { tier: string; current_usd: unknown }[] | null): Rec
 export async function getCurrentPrices(): Promise<Record<TierName, number | null>> {
   const res = await db().from("prices").select("tier, current_usd");
   return mergePrices(res.error ? null : res.data);
+}
+
+/**
+ * Prices for the prerendered shell (no loading state, readable without JS). Cached and tagged
+ * "prices": ops/change_price revalidates the tag. Falls back to constants if the DB read fails.
+ */
+export async function getShellPrices(): Promise<Record<TierName, number | null>> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("prices");
+  try {
+    return await getCurrentPrices();
+  } catch {
+    return mergePrices(null);
+  }
 }
 
 export async function getLandingData(): Promise<LandingData> {

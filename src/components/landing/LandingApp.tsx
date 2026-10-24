@@ -1,7 +1,7 @@
 "use client";
 // Landing client island: free preview form → result → price ladder → checkout / specialist quote.
 import { Suspense, use, useCallback, useEffect, useRef, useState } from "react";
-import type { AddonName } from "@/lib/constants";
+import type { AddonName, TierName } from "@/lib/constants";
 import type { PreviewResult } from "@/lib/types";
 import type { LandingData } from "@/lib/queries";
 import { SRC_COOKIE, isUuid, normalizeSrc, usd } from "@/components/rules";
@@ -41,10 +41,12 @@ async function postJson<T>(url: string, body: unknown): Promise<T | ApiError> {
 
 export function LandingApp({
   intro,
+  prices,
   data,
   turnstileSiteKey,
 }: {
   intro: React.ReactNode;
+  prices: Record<TierName, number | null>;
   data: Promise<LandingData>;
   turnstileSiteKey: string | null;
 }) {
@@ -167,36 +169,56 @@ export function LandingApp({
             <h2>Free preview</h2>
             <p className="lede">No card, no login. See what a stranger takes from your page in about 10 seconds.</p>
 
-            {inputMode === "url" ? (
-              <div className="field">
-                <label htmlFor="pv-url">Your page URL</label>
-                <input
-                  id="pv-url"
-                  type="url"
-                  inputMode="url"
-                  autoComplete="url"
-                  placeholder="https://yourproduct.com"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                />
-                <button type="button" className="btn-link small" onClick={() => setInputMode("pitch")}>
-                  Paste your pitch instead
+            <div className="segmented" role="tablist" aria-label="What to test">
+              {(["url", "pitch"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  id={`pv-tab-${m}`}
+                  aria-selected={inputMode === m}
+                  aria-controls="pv-input-panel"
+                  tabIndex={inputMode === m ? 0 : -1}
+                  className={inputMode === m ? "segmented-on" : undefined}
+                  onClick={() => setInputMode(m)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+                    e.preventDefault();
+                    const next = m === "url" ? "pitch" : "url";
+                    setInputMode(next);
+                    document.getElementById(`pv-tab-${next}`)?.focus();
+                  }}
+                >
+                  {m === "url" ? "Page URL" : "Paste your pitch"}
                 </button>
-              </div>
-            ) : (
-              <div className="field">
-                <label htmlFor="pv-pitch">Your pitch</label>
-                <textarea
-                  id="pv-pitch"
-                  placeholder="Headline, subheadline, the main points, and your call to action."
-                  value={pitch}
-                  onChange={(e) => setPitch(e.target.value)}
-                />
-                <button type="button" className="btn-link small" onClick={() => setInputMode("url")}>
-                  Use a URL instead
-                </button>
-              </div>
-            )}
+              ))}
+            </div>
+            <div id="pv-input-panel" role="tabpanel" aria-labelledby={`pv-tab-${inputMode}`}>
+              {inputMode === "url" ? (
+                <div className="field">
+                  <label htmlFor="pv-url">Your page URL</label>
+                  <input
+                    id="pv-url"
+                    type="url"
+                    inputMode="url"
+                    autoComplete="url"
+                    placeholder="https://yourproduct.com"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div className="field">
+                  <label htmlFor="pv-pitch">Your pitch</label>
+                  <textarea
+                    id="pv-pitch"
+                    placeholder="Headline, subheadline, the main points, and your call to action."
+                    value={pitch}
+                    onChange={(e) => setPitch(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
 
             <div className="field">
               <label htmlFor="pv-buyer">Who&apos;s your buyer?</label>
@@ -253,8 +275,8 @@ export function LandingApp({
           The preview is our AI&apos;s read. A jury is real, identity-verified people who match your buyer, recruited and paid
           through Terac. You get a directional signal from real people, not a guarantee of sales.
         </p>
-        <Suspense fallback={<p className="skeleton">Loading prices…</p>}>
           <Ladder
+            prices={prices}
             data={data}
             refused={refused}
             formComplete={formComplete}
@@ -268,7 +290,6 @@ export function LandingApp({
               ...(src ? { src } : {}),
             }}
           />
-        </Suspense>
         </div>
       </section>
     </>
@@ -310,21 +331,32 @@ function PreviewResultView({ result, onReset }: { result: PreviewResult; onReset
   );
 }
 
+/** Reads the streamed sales-paused flag without blocking the price ladder. */
+function PausedSync({ data, onPaused }: { data: Promise<LandingData>; onPaused: (paused: boolean) => void }) {
+  const { salesPaused } = use(data);
+  useEffect(() => {
+    if (salesPaused) onPaused(true);
+  }, [salesPaused, onPaused]);
+  return null;
+}
+
 function Ladder({
+  prices,
   data,
   refused,
   formComplete,
   onIncomplete,
   checkoutBase,
 }: {
+  prices: Record<TierName, number | null>;
   data: Promise<LandingData>;
   refused: boolean;
   formComplete: boolean;
   onIncomplete: () => void;
   checkoutBase: Record<string, string | undefined>;
 }) {
-  const { prices, salesPaused: initiallyPaused } = use(data);
-  const [salesPaused, setSalesPaused] = useState(initiallyPaused);
+  // Prices render immediately; the paused flag streams in (checkout also refuses while paused).
+  const [salesPaused, setSalesPaused] = useState(false);
   const [addons, setAddons] = useState<AddonName[]>([]);
   const [secondUrl, setSecondUrl] = useState("");
   const [buying, setBuying] = useState<BuyableTier | null>(null);
@@ -373,6 +405,9 @@ function Ladder({
 
   return (
     <>
+      <Suspense fallback={null}>
+        <PausedSync data={data} onPaused={setSalesPaused} />
+      </Suspense>
       {salesPaused ? (
         <div className="notice notice-warn" role="status">
           <p>

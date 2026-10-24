@@ -1065,3 +1065,35 @@ details.jurors summary {
 .specialist .rung-meta {
   margin-bottom: 12px;
 }
+
+/* URL / pitch segmented control (role="tablist") */
+.segmented {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--wash);
+}
+.segmented button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.segmented button.segmented-on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--rule);
+}
+.segmented button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}

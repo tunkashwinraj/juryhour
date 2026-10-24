@@ -18,7 +18,16 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="wrap">
-        <p>Research, not a sales guarantee.</p>
+        <nav className="small" aria-label="Footer">
+          <a href="/#pricing">Pricing</a> · <a href="/">Free preview</a>
+        </nav>
+        <p className="small">
+          © 2026 JuryHour · Research, not a sales guarantee · Jurors recruited through{" "}
+          <a href="https://terac.com" rel="noopener">
+            Terac
+          </a>{" "}
+          · Payments by Whop
+        </p>
       </div>
     </footer>
   );

@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { SiteFooter, SiteHeader } from "@/components/SiteHeader";
 import { LandingApp } from "@/components/landing/LandingApp";
-import { getLandingData, type LandingData } from "@/lib/queries";
+import { getLandingData, getShellPrices, type LandingData } from "@/lib/queries";
 import { TIERS, type TierName } from "@/lib/constants";
 
 /** DB trouble must never take the landing page down: fall back to constant prices. */
@@ -18,8 +18,9 @@ async function landingData(): Promise<LandingData> {
   }
 }
 
-export default function Home() {
-  // Not awaited: the form renders in the static shell, prices stream in (Cache Components).
+export default async function Home() {
+  // Prices are cached and prerendered into the static shell; sales-paused state and public verdicts stream in.
+  const prices = await getShellPrices();
   const data = landingData();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || null;
 
@@ -31,7 +32,7 @@ export default function Home() {
           <a href="#pricing">Prices</a>
         </nav>
       </SiteHeader>
-      <LandingApp data={data} turnstileSiteKey={turnstileSiteKey} intro={<Intro />} />
+      <LandingApp prices={prices} data={data} turnstileSiteKey={turnstileSiteKey} intro={<Intro />} />
       <Suspense fallback={null}>
         <PublicVerdicts data={data} />
       </Suspense>
