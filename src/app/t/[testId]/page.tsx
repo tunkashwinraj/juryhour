@@ -17,6 +17,11 @@ export const metadata: Metadata = {
   description: "Read a short description and share your honest reaction.",
   robots: { index: false, follow: false },
   icons: { icon: BLANK_ICON, apple: [], shortcut: [] },
+  // Replaces the root layout's branded Open Graph/Twitter defaults, so a link preview of a juror
+  // task shows nothing about JuryHour (or the customer).
+  openGraph: { title: "Quick feedback task", description: "Read a short description and share your honest reaction." },
+  twitter: { card: "summary", title: "Quick feedback task", description: "Read a short description and share your honest reaction." },
+  manifest: null, // the site manifest is named JuryHour
 };
 
 export const viewport: Viewport = {

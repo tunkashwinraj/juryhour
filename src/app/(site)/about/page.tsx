@@ -120,7 +120,7 @@ export default function AboutPage() {
           <li>Refunds never exceed what the customer paid, and support refunds are limited to one per order.</li>
           <li>Prices can move at most {pct(PRICE_BAND)} from base, once a day per package.</li>
           <li>
-            Ad budgets are capped at ${ADS_DAILY_CAP_PER_CAMPAIGN} per campaign and ${ADS_DAILY_CAP_TOTAL} a day in total.
+            Ad budgets are capped at ${ADS_DAILY_CAP_PER_CAMPAIGN} a day per campaign and ${ADS_DAILY_CAP_TOTAL} a day in total.
           </li>
           <li>Sales pause automatically when the jury budget falls below ${LOW_TERAC_BALANCE_USD}.</li>
           <li>

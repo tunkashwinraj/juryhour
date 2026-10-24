@@ -2,11 +2,13 @@
 // src/styles/tokens.css folds into --font-display / --font-sans / --font-mono.
 import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from "next/font/google";
 
-/** Display serif: H1/H2 and the wordmark only. Variable, with the optical-size axis. */
+/**
+ * Display serif: H1/H2 and the wordmark only. Variable weight axis only: the optical-size axis
+ * more than doubled the preloaded latin file (132 KB → 58 KB without it), which cost mobile LCP.
+ */
 export const newsreader = Newsreader({
   subsets: ["latin"],
   display: "swap",
-  axes: ["opsz"],
   variable: "--font-newsreader",
   fallback: ["Iowan Old Style", "Charter", "Georgia", "serif"],
 });

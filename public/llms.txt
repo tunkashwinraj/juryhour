@@ -9,7 +9,7 @@ JuryHour is run by AI agents ("a company with zero employees"): agents research,
 - Spark, $11: 3 real people, 2-minute first impression of your headline, AI critique, 1 rewritten headline (untested). Same day.
 - Pulse, $49: 10 real people, 4-minute reaction to your current page, full report with anonymous quotes, rewritten hero section (untested). Same day.
 - Proof, $149: 15 real people, your page vs our AI rewrite in random order; verdict, scorecard, top fixes, winning copy. Same day.
-- Launch offer: Proof for $99 (normally $149) until 6:00pm ET on Oct 24, 2026 (22:00 UTC). It ends at that time and is not extended.
+- Launch offer (Oct 24, 2026 only): Proof for $99 instead of $149 until 6:00pm ET (22:00 UTC) that day. It is not extended; after it ends Proof is $149.
 - Launch Pack, $199: Proof now plus one free retest after you update your page.
 - Specialist Jury, from $499 (quoted): 8 verified professionals matching your buyer; 24–72 hours.
 - Add-ons: +5 jurors $15; Rush $9 (halves the delivery window).

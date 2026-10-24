@@ -7,7 +7,7 @@ Docs: https://code.claude.com/docs/en/routines · fire API: https://platform.cla
 ## 1. Prerequisites
 
 - The repo **`tunkashwinraj/juryhour`** is on GitHub with `agents/*.md` on the default branch, and your claude.ai account has GitHub access to it (each run clones it). Agents only *read* it; their prompts forbid commits/pushes. Optional: add branch protection on `main`.
-- The app is deployed and reachable at a public URL (`NEXT_PUBLIC_APP_URL`, e.g. `https://juryhour.vercel.app` until `juryhour.com` is wired). If Vercel Deployment Protection is on, the Ops API must be reachable without it (or use a protection-bypass header) — agents can't log in.
+- The app is deployed and reachable at a public URL (`NEXT_PUBLIC_APP_URL`, `https://juryhour.com`). If Vercel Deployment Protection is on, the Ops API must be reachable without it (or use a protection-bypass header) — agents can't log in.
 - `OPS_API_KEY` is set in Vercel.
 
 ## 2. Cloud environment (create once, share across all 8 tasks)
@@ -16,7 +16,7 @@ Create an environment named **`juryhour-agents`** (claude.ai/code → environmen
 
 | Setting | Value |
 |---|---|
-| Network access | **Custom**. Allowed domains: the app host only (e.g. `juryhour.vercel.app`; add `juryhour.com` when live). Check **Also include default list of common package managers**. No Exa/OpenAI/Whop/Terac hosts: agents never call them. |
+| Network access | **Custom**. Allowed domains: the app host only: `juryhour.com`. Check **Also include default list of common package managers**. No Exa/OpenAI/Whop/Terac hosts: agents never call them. |
 | Environment variables | `JURYHOUR_APP_URL=https://<app host>` (no trailing slash) |
 | Ops key — preferred | **Network secret**: type Bearer, Allowed websites = the app host, header `Authorization`, prefix `Bearer`, value = `OPS_API_KEY`. Leave `JURYHOUR_OPS_KEY` **unset**: the prompts omit the header when the variable is empty and the proxy attaches it, so the key never enters the VM. |
 | Ops key — fallback | Environment variable `JURYHOUR_OPS_KEY=<OPS_API_KEY>` (readable by anyone using this environment; it's your private environment). Use this only if network secrets are unavailable. |
